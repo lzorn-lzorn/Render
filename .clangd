@@ -1,0 +1,16 @@
+CompileFlags:
+  CompilationDatabase: build
+  Add:
+    - -I
+    - D:/Render/Render
+    - -I
+    - D:/Render/SandBox/SDL/include
+    - -I
+    - D:/Render/build/SandBox/SDL/include-revision
+
+Index:
+  Background: Build
+
+Completion:
+  AllScopes: Yes
+  HeaderInsertion: IWYU
