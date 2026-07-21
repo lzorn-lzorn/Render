@@ -1,0 +1,5 @@
+build
+Build
+build-*
+cmake-release-build
+cmake-debug-build
