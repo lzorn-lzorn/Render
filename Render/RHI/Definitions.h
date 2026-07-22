@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include <span>
+#include <cstddef>
+#include <type_traits>
 namespace render::rhi
 {
 
@@ -254,7 +256,7 @@ struct ESamplerDescriptor
 struct EShaderDescriptor
 {
 	EShaderStage Stage;
-	std::vector<uint8_t> ByteCode;
+	std::vector<std::byte> ByteCodes;
 	std::string Name;
 	std::string EntryPoint = "main";
 	std::string SourceCode;
