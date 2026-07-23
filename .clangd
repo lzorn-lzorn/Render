@@ -2,14 +2,10 @@ CompileFlags:
   CompilationDatabase: build
   Add:
     - -std=c++23
-    - -I
-    - Render
-    - -I
-    - SandBox/SDL/include
-    - -I
-    - build/SandBox/SDL/include-revision
-    - -I
-    - '%VULKAN_SDK%/Include'
+    - -IRender
+    - -ISandBox/SDL/include
+    - -Ibuild/SandBox/SDL/include-revision
+    - "-I${env:VULKAN_SDK}/Include"
     - -include
     - vulkan/vulkan.h
 
