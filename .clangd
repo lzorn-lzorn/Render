@@ -5,7 +5,8 @@ CompileFlags:
     - -IRender
     - -ISandBox/SDL/include
     - -Ibuild/SandBox/SDL/include-revision
-    - "-I${env:VULKAN_SDK}/Include"
+    - -IE:/Vulkan/include
+    <!-- - -I${env:VULKAN_SDK}/include -->
     - -include
     - vulkan/vulkan.h
 

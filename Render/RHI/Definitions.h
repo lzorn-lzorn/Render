@@ -340,7 +340,7 @@ struct EDepthStencilState
 
 };
 
-struct GraphicsPipelineDescriptor
+struct RGraphicsPipelineDescriptor
 {
 	class RShader* VertexShader = nullptr;
 	class RShader* PixelShader = nullptr;
@@ -361,7 +361,7 @@ struct GraphicsPipelineDescriptor
 	uint32_t SampleCount = 1;
 };
 
-struct ComputePipelineDescriptor
+struct RComputePipelineDescriptor
 {
 	class RShader* ComputeShader = nullptr;
 };
@@ -624,8 +624,8 @@ public:
 	virtual RTexture* createTexture(const ETextureDescriptor& Descriptor) = 0;
 	virtual RSampler* createSampler(const ESamplerDescriptor& Descriptor) = 0;
 	virtual RShader* createShader(const EShaderDescriptor& Descriptor) = 0;
-	virtual RPipelineState* createGraphicsPipeline(const GraphicsPipelineDescriptor& Descriptor) = 0;
-	virtual RPipelineState* createComputePipeline(const ComputePipelineDescriptor& Descriptor) = 0;
+	virtual RPipelineState* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) = 0;
+	virtual RPipelineState* createComputePipeline(const RComputePipelineDescriptor& Descriptor) = 0;
 	virtual RBindGroupLayout* createBindGroupLayout(const RBindGroupLayoutDescriptor& Descriptor) = 0;
 	virtual RBindGroup* createBindGroup(const RBindGroupDescriptor& Descriptor) = 0;
 	
