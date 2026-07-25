@@ -11,6 +11,9 @@
 namespace render::rhi
 {
 
+using DeviceSizeType = uint64_t; // device memory size and offset values
+// Vk: typedef uint64_t VkDeviceSize;
+
 enum class EResourceType
 {
 	Buffer,
@@ -18,8 +21,8 @@ enum class EResourceType
 	Sampler,
 	Shader,
 	Pipeline,
-	BindGroup,
-	BindGroupLayout,
+	DescriptorSet,
+	DescriptorSetLayout,
 	Fence,
 	Swapchain
 };
@@ -42,7 +45,7 @@ enum class EResourceState {
 
 enum class EFormat : uint32_t
 {
-	Unkown,
+	Undefined,
 	RGBA8_UNorm,
 	RGBA8_sRGB,
 	BGRA8_UNorm,
@@ -76,7 +79,7 @@ enum class ETextureUsage : uint32_t
 	None         = 0,
 	Sampled      = 1 << 0,
 	Storage      = 1 << 1,
-	Target = 1 << 2,
+	Target       = 1 << 2,
 	DepthStencil = 1 << 3,
 	TransferSrc  = 1 << 4,
 	TransferDst  = 1 << 5,
@@ -119,6 +122,7 @@ enum class EStoreOp
 
 enum class EIndexFormat
 {
+	None,
 	UInt16,
 	UInt32
 };
@@ -209,7 +213,7 @@ enum class ESampleCount
 	Count64 = 64
 };
 
-struct EBufferDescriptor
+struct RBufferDescriptor
 {
 	EBufferUsage Usage = EBufferUsage::None;
 	uint32_t Size = 0;
@@ -217,7 +221,7 @@ struct EBufferDescriptor
 	std::string Name;
 };
 
-struct ETextureDescriptor
+struct RTextureDescriptor
 {
 	ETextureUsage Usage = ETextureUsage::None;
 	EFormat Format = EFormat::BGRA8_UNorm;
@@ -230,7 +234,7 @@ struct ETextureDescriptor
 	std::string Name;
 };
 
-struct ESamplerDescriptor
+struct RSamplerDescriptor
 {
 	enum class EFilter
 	{
@@ -253,7 +257,7 @@ struct ESamplerDescriptor
 	std::string Name;
 };
 
-struct EShaderDescriptor
+struct RShaderDescriptor
 {
 	EShaderStage Stage;
 	std::vector<std::byte> ByteCodes;
@@ -262,7 +266,12 @@ struct EShaderDescriptor
 	std::string SourceCode;
 };
 
-struct EVertexAttribute
+struct RShaderHandle
+{
+	uint64_t Value = 0;
+};
+
+struct RVertexAttribute
 {
 	uint32_t Location;
 	uint32_t Binding;
@@ -270,25 +279,65 @@ struct EVertexAttribute
 	uint32_t Offset;
 };
 
-struct EVertexBinding
+struct RVertexBindingDescriptor
 {
 	enum class EVertexInputRate
 	{
-		Vertex,
+		// 着色器每处理一个顶点, 就会从绑定的缓冲区中按 Stride 前进一次, 读取下一组顶点数据
+		Vertex, 
+		// 着色器每处理一个实例,才按 stride 前进一次. 也就是说, 同一实例内的所有顶点共享同一份实例数据
 		Instance
 	};
 	uint32_t Binding;
 	uint32_t Stride;
+
+	// 着色器在绘制多少个实例后, 才从该绑定中读取下一组实例数据, 仅在 Instance 模式下有效
+	uint32_t InstanceStepRate;
 	EVertexInputRate Rate = EVertexInputRate::Vertex;
 };
 
-struct EVertexInputLayout
+struct RVertexBufferView
 {
-	std::vector<EVertexAttribute> Attributes;
-	std::vector<EVertexBinding> Bindings;
+	RBuffer VertexBuffer;
+	DeviceSizeType Size;
+	RVertexBindingDescriptor BindingDescriptor; 
+	bool isValid() const noexcept { return VertexBuffer.isValid(); }
 };
 
-struct ERasterizerState
+struct RIndexBufferView
+{
+	RBuffer IndexBuffer;
+	DeviceSizeType Offset;
+	DeviceSizeType Size;
+	EIndexFormat Format;
+
+	bool isValid() const noexcept { return IndexBuffer.isValid(); }
+};
+
+
+struct RVertexInputLayout
+{
+	std::vector<RVertexAttribute> Attributes;
+	std::vector<RVertexBindingDescriptor> Bindings;
+};
+
+struct RGeometryView
+{
+	std::span<const RVertexBufferView> VertexBuffers;
+	std::span<const RVertexAttribute> VertexAttributes;
+	
+	RIndexBufferView IndexBuffer;
+	uint32_t VertexCount = 0;
+	uint32_t FirstVertex = 0;
+	uint32_t FirstInstance = 0;
+	uint32_t InstanceCount = 1;
+
+	[[nodiscard]] bool isIndexed() const { return IndexBuffer.isValid(); }
+};
+
+
+
+struct RRasterizerState
 {
 	EFillMode FillMode = EFillMode::Solid;
 	ECullMode CullMode = ECullMode::Back;
@@ -303,7 +352,7 @@ struct ERasterizerState
 	bool AntialiasedLineEnable = false;
 };
 
-struct EBlendAttachment
+struct RBlendAttachment
 {
 	bool BlendEnable = false;
 	EBlendFactor SrcColorBlendFactor = EBlendFactor::One;
@@ -314,13 +363,13 @@ struct EBlendAttachment
 	EBlendOp AlphaBlendOp = EBlendOp::Add;
 };
 
-struct EBlendState
+struct RBlendState
 {
 	bool BlendEnable = false;
-	std::vector<EBlendAttachment> Attachments;
+	std::vector<RBlendAttachment> Attachments;
 };
 
-struct EDepthStencilState
+struct RDepthStencilState
 {
 	bool DepthTestEnable = true;
 	bool DepthWriteEnable = true;
@@ -349,13 +398,13 @@ struct RGraphicsPipelineDescriptor
 	class RShader* AmplificationShader = nullptr;
 	
 	EVertexInputLayout VertexInputLayout;
-	ERasterizerState RasterizerState;
-	EBlendState BlendState;
-	EDepthStencilState DepthStencilState;
+	RRasterizerState RasterizerState;
+	RBlendState BlendState;
+	RDepthStencilState DepthStencilState;
 
 	std::array<EFormat, 8> RenderTargetFormats = {};
 	uint32_t RenderTargetCount = 0;
-	EFormat DepthStencilFormat = EFormat::Unkown;
+	EFormat DepthStencilFormat = EFormat::Unknown;
 	
 	EPrimitiveTopology PrimitiveTopology = EPrimitiveTopology::TriangleList;
 	uint32_t SampleCount = 1;
@@ -365,7 +414,7 @@ struct RComputePipelineDescriptor
 {
 	class RShader* ComputeShader = nullptr;
 };
-struct ETextureViewDescriptor
+struct RTextureViewDescriptor
 {
 	enum class EViewType
 	{
@@ -375,7 +424,7 @@ struct ETextureViewDescriptor
 		DSV
 	};
 	EViewType Type = EViewType::SRV;
-	EFormat Format = EFormat::Unkown;
+	EFormat Format = EFormat::Unknown;
 	uint32_t BaseMipLevel = 0;
 	uint32_t MipLevelCount = 1;
 	uint32_t BaseArrayLayer = 0;
@@ -421,7 +470,7 @@ struct RResourceBarrier
 	EResourceState After = EResourceState::Common;
 };
 
-struct RBindGroupLayoutEntry
+struct RDescriptorSetLayoutEntry
 {
 	uint32_t Binding;
 	EShaderStage Stage;
@@ -429,7 +478,7 @@ struct RBindGroupLayoutEntry
 	uint32_t Count = 1;
 };
 
-using RBindGroupLayoutDescriptor = std::vector<RBindGroupLayoutEntry>;
+using RDescriptorSetLayoutDescriptor = std::vector<RDescriptorSetLayoutEntry>;
 
 struct RDescriptorBinding
 {
@@ -441,11 +490,12 @@ struct RDescriptorBinding
 	uint32_t ArrayIndex = 0;
 };
 
-struct RBindGroupDescriptor
+struct RDescriptorSetDescriptor
 {
-	class RBindGroupLayout* Layout = nullptr;
+	class RDescriptorSetLayout* Layout = nullptr;
 	std::vector<RDescriptorBinding> Bindings;
 };
+
 
 struct RViewport 
 {
@@ -483,11 +533,16 @@ struct RTextureCopyDescriptor
 	uint32_t Depth = 1;
 };
 
+
+/**
+ * @brief RResource 内封装的是一个 GPU 资源的句柄对象.
+ */
 class RResource
 {
 public:
 	virtual ~RResource() = default;
 	virtual EResourceType getType() const = 0;
+	virtual bool isValid() const = 0;
 	void setName(const std::string& InName) 
 	{ 
 		Name = InName; 
@@ -546,19 +601,21 @@ public:
 	virtual bool isGraphicsPipeline() const = 0;
 };
 
-class RBindGroupLayout : public RResource
+class RDescriptorSetLayout : public RResource
 {
 public:
-	virtual EResourceType getType() const override { return EResourceType::BindGroupLayout; }
+	virtual EResourceType getType() const override { return EResourceType::DescriptorSetLayout; }
 
 };
 
-class RBindGroup : public RResource
+class RDescriptorSet : public RResource
 {
 public:
-	virtual EResourceType getType() const override { return EResourceType::BindGroup; }
+	virtual EResourceType getType() const override { return EResourceType::DescriptorSet; }
 
 };
+
+
 
 class RCommandList 
 {
@@ -572,7 +629,7 @@ public:
 
 	virtual void setGraphicsPipeline(class RPipelineState* Pipeline) = 0;
 	virtual void setComputePipeline(class RPipelineState* Pipeline) = 0;
-	virtual void setBindGroup(uint32_t Index, class RBindGroup* BindGroup) = 0;
+	virtual void setDescriptorSet(uint32_t Index, class RDescriptorSet* DescriptorSet) = 0;
 	virtual void setVertexBuffer(uint32_t Slot, class RBuffer* Buffer) = 0;
 	virtual void setIndexBuffer(class RBuffer* Buffer, EIndexFormat Format) = 0;
 	virtual void setViewport(const RViewport& Viewport) = 0;
@@ -626,8 +683,8 @@ public:
 	virtual RShader* createShader(const EShaderDescriptor& Descriptor) = 0;
 	virtual RPipelineState* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) = 0;
 	virtual RPipelineState* createComputePipeline(const RComputePipelineDescriptor& Descriptor) = 0;
-	virtual RBindGroupLayout* createBindGroupLayout(const RBindGroupLayoutDescriptor& Descriptor) = 0;
-	virtual RBindGroup* createBindGroup(const RBindGroupDescriptor& Descriptor) = 0;
+	virtual RDescriptorSetLayout* createDescriptorSetLayout(const RDescriptorSetLayoutDescriptor& Descriptor) = 0;
+	virtual RDescriptorSet* createDescriptorSet(const RDescriptorSetDescriptor& Descriptor) = 0;
 	
 	// 命令与同步
 	virtual RCommandList* createCommandList(ECommandQueueType Type) = 0;
