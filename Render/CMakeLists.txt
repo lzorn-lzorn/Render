@@ -1,6 +1,6 @@
 # Render 库
 add_library(Render STATIC
-    render.cpp
+    Renderer.cpp
 )
 
 # 公开头文件目录（使得其他目标可以直接 #include "render.h"）

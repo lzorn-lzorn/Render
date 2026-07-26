@@ -11,24 +11,26 @@ namespace render
  */
 struct RMaterialBindingDescriptor
 {
-	RShaderHandle VertexShader;
-	RShaderHandle PixelShader;
+	rhi::RShaderHandle VertexShader;
+	rhi::RShaderHandle PixelShader;
 
-	RDescriptorSet DescriptorSet;
-	RPipelineLayout PipelineLayout;
+// TODO: 需要接入 Handle 支持
+  	rhi::RDescriptorSet* DescriptorSet;
+// rhi 不提供 PipelineLayout 的封装
+//	rhi::RPipelineLayout PipelineLayout;
 
-	EFormat ColorFormat;
-	EFormat DepthFormat;
-	ESampleCount SampleCount;	
+	rhi::EFormat ColorFormat;
+	rhi::EFormat DepthFormat;
+	rhi::ESampleCount SampleCount;
 
-	EPrimitiveTopology PrimitiveTopology;
-	ECullMode CullMode;
+	rhi::EPrimitiveTopology PrimitiveTopology;
+	rhi::ECullMode CullMode;
 	bool IsFrontCounterClockwise; // Vulkan 的 FRONT_FACE_CLOCKWISE
 	bool IsDepthTestEnable;
 	bool IsDepthWriteEnable;
-	ECompareOp DepthCompare;
+	rhi::ECompareOp DepthCompare;
 };
 
 
 
-}
+} // namespace render

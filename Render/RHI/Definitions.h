@@ -213,6 +213,35 @@ enum class ESampleCount
 	Count64 = 64
 };
 
+
+/**
+ * @brief RResource 内封装的是一个 GPU 资源的句柄对象.
+ */
+class RResource
+{
+public:
+	virtual ~RResource() = default;
+	virtual EResourceType getType() const = 0;
+	virtual bool isValid() const = 0;
+	void setName(const std::string& InName) 
+	{ 
+		Name = InName; 
+		SetDebugName(Name);
+	}
+	const std::string& getName() const { return Name; }
+protected:
+	virtual void SetDebugName(const std::string& InName) = 0;
+	std::string Name;
+};
+
+class RBuffer : public RResource
+{
+public:
+	virtual EResourceType getType() const override { return EResourceType::Buffer; }
+	virtual uint64_t getSize() const = 0;
+};
+
+
 struct RBufferDescriptor
 {
 	EBufferUsage Usage = EBufferUsage::None;
@@ -298,20 +327,20 @@ struct RVertexBindingDescriptor
 
 struct RVertexBufferView
 {
-	RBuffer VertexBuffer;
+	RBuffer* VertexBuffer;
 	DeviceSizeType Size;
 	RVertexBindingDescriptor BindingDescriptor; 
-	bool isValid() const noexcept { return VertexBuffer.isValid(); }
+	bool isValid() const noexcept { return VertexBuffer && VertexBuffer->isValid(); }
 };
 
 struct RIndexBufferView
 {
-	RBuffer IndexBuffer;
+	RBuffer* IndexBuffer;
 	DeviceSizeType Offset;
 	DeviceSizeType Size;
 	EIndexFormat Format;
 
-	bool isValid() const noexcept { return IndexBuffer.isValid(); }
+	bool isValid() const noexcept { return IndexBuffer && IndexBuffer->isValid(); }
 };
 
 
@@ -320,21 +349,6 @@ struct RVertexInputLayout
 	std::vector<RVertexAttribute> Attributes;
 	std::vector<RVertexBindingDescriptor> Bindings;
 };
-
-struct RGeometryView
-{
-	std::span<const RVertexBufferView> VertexBuffers;
-	std::span<const RVertexAttribute> VertexAttributes;
-	
-	RIndexBufferView IndexBuffer;
-	uint32_t VertexCount = 0;
-	uint32_t FirstVertex = 0;
-	uint32_t FirstInstance = 0;
-	uint32_t InstanceCount = 1;
-
-	[[nodiscard]] bool isIndexed() const { return IndexBuffer.isValid(); }
-};
-
 
 
 struct RRasterizerState
@@ -397,14 +411,14 @@ struct RGraphicsPipelineDescriptor
 	class RShader* MeshShader = nullptr;
 	class RShader* AmplificationShader = nullptr;
 	
-	EVertexInputLayout VertexInputLayout;
+	RVertexInputLayout VertexInputLayout;
 	RRasterizerState RasterizerState;
 	RBlendState BlendState;
 	RDepthStencilState DepthStencilState;
 
 	std::array<EFormat, 8> RenderTargetFormats = {};
 	uint32_t RenderTargetCount = 0;
-	EFormat DepthStencilFormat = EFormat::Unknown;
+	EFormat DepthStencilFormat = EFormat::Undefined;
 	
 	EPrimitiveTopology PrimitiveTopology = EPrimitiveTopology::TriangleList;
 	uint32_t SampleCount = 1;
@@ -424,7 +438,7 @@ struct RTextureViewDescriptor
 		DSV
 	};
 	EViewType Type = EViewType::SRV;
-	EFormat Format = EFormat::Unknown;
+	EFormat Format = EFormat::Undefined;
 	uint32_t BaseMipLevel = 0;
 	uint32_t MipLevelCount = 1;
 	uint32_t BaseArrayLayer = 0;
@@ -534,38 +548,13 @@ struct RTextureCopyDescriptor
 };
 
 
-/**
- * @brief RResource 内封装的是一个 GPU 资源的句柄对象.
- */
-class RResource
-{
-public:
-	virtual ~RResource() = default;
-	virtual EResourceType getType() const = 0;
-	virtual bool isValid() const = 0;
-	void setName(const std::string& InName) 
-	{ 
-		Name = InName; 
-		SetDebugName(Name);
-	}
-	const std::string& getName() const { return Name; }
-protected:
-	virtual void SetDebugName(const std::string& InName) = 0;
-	std::string Name;
-};
 
-class RBuffer : public RResource
-{
-public:
-	virtual EResourceType getType() const override { return EResourceType::Buffer; }
-	virtual uint64_t getSize() const = 0;
-};
 
 class RTexture : public RResource
 {
 public:
 	virtual EResourceType getType() const override { return EResourceType::Texture; }
-	virtual class RTextureView* createView(const ETextureViewDescriptor& Descriptor) = 0;
+	virtual class RTextureView* createView(const RTextureViewDescriptor& Descriptor) = 0;
 	virtual uint32_t getWidth() const = 0;
 	virtual uint32_t getHeight() const = 0;
 	virtual uint32_t getDepth() const = 0;
@@ -577,7 +566,7 @@ class RTextureView : public RResource
 public:
 	virtual EResourceType getType() const override { return EResourceType::Texture; }
 	virtual RTexture* getTexture() const = 0;
-	virtual ETextureViewDescriptor getDescriptor() const = 0;
+	virtual RTextureViewDescriptor getDescriptor() const = 0;
 };
 
 class RSampler : public RResource
@@ -671,16 +660,26 @@ public:
 
 };
 
+struct RSwapchainDescriptor
+{
+	uint32_t Width = 800;
+	uint32_t Height = 600;
+	EFormat Format = EFormat::BGRA8_UNorm;
+	uint32_t BufferCount = 3;
+	bool VSync = true;
+	std::string Name;
+};
+
 class RDevice
 {
 public:
 	virtual ~RDevice() = default;
 
 	// 资源创建
-	virtual RBuffer* createBuffer(const EBufferDescriptor& Descriptor) = 0;
-	virtual RTexture* createTexture(const ETextureDescriptor& Descriptor) = 0;
-	virtual RSampler* createSampler(const ESamplerDescriptor& Descriptor) = 0;
-	virtual RShader* createShader(const EShaderDescriptor& Descriptor) = 0;
+	virtual RBuffer* createBuffer(const RBufferDescriptor& Descriptor) = 0;
+	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor) = 0;
+	virtual RSampler* createSampler(const RSamplerDescriptor& Descriptor) = 0;
+	virtual RShader* createShader(const RShaderDescriptor& Descriptor) = 0;
 	virtual RPipelineState* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) = 0;
 	virtual RPipelineState* createComputePipeline(const RComputePipelineDescriptor& Descriptor) = 0;
 	virtual RDescriptorSetLayout* createDescriptorSetLayout(const RDescriptorSetLayoutDescriptor& Descriptor) = 0;
@@ -688,7 +687,7 @@ public:
 	
 	// 命令与同步
 	virtual RCommandList* createCommandList(ECommandQueueType Type) = 0;
-	virtual RSwapchain* createSwapchain(const ETextureDescriptor& Descriptor) = 0;
+	virtual RSwapchain* createSwapchain(const RSwapchainDescriptor& Descriptor) = 0;
 	virtual RFence* createFence() = 0;
 
 	// 队列提交
@@ -708,14 +707,6 @@ public:
 	virtual void destroyResource(RResource* Resource) = 0;
 };
 
-struct RSwapchainDescriptor
-{
-	uint32_t Width = 800;
-	uint32_t Height = 600;
-	EFormat Format = EFormat::BGRA8_UNorm;
-	uint32_t BufferCount = 3;
-	bool VSync = true;
-	std::string Name;
-};
+
 
 } // namespace render::rhi

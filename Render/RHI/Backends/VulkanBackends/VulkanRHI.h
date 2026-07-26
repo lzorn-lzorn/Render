@@ -8,12 +8,12 @@
 namespace render::rhi
 {
 
-std::unordered_map<EIndexFormat, VkIndexType> IndexFormatToVkIndexTypeMap = {
+inline std::unordered_map<EIndexFormat, VkIndexType> IndexFormatToVkIndexTypeMap = {
 	{ EIndexFormat::UInt16, VK_INDEX_TYPE_UINT16 },
 	{ EIndexFormat::UInt32, VK_INDEX_TYPE_UINT32 }
 };
 
-std::unordered_map<EFormat, VkFormat> FormatToVkFormatMap = {
+inline std::unordered_map<EFormat, VkFormat> FormatToVkFormatMap = {
 	{ EFormat::Undefined, VK_FORMAT_UNDEFINED },
 	{ EFormat::RGBA8_UNorm, VK_FORMAT_R8G8B8A8_UNORM },
 	{ EFormat::RGBA8_sRGB, VK_FORMAT_R8G8B8A8_SRGB },
@@ -24,14 +24,14 @@ std::unordered_map<EFormat, VkFormat> FormatToVkFormatMap = {
 	{ EFormat::D32_Float, VK_FORMAT_D32_SFLOAT }
 };
 
-std::unordered_map<EBlendFactor, VkBlendFactor> BlendFactorToVkBlendFactorMap = {
+inline std::unordered_map<EBlendFactor, VkBlendFactor> BlendFactorToVkBlendFactorMap = {
 	{ EBlendFactor::Zero, VK_BLEND_FACTOR_ZERO },
 	{ EBlendFactor::One, VK_BLEND_FACTOR_ONE },
 	{ EBlendFactor::SrcAlpha, VK_BLEND_FACTOR_SRC_ALPHA },
 	{ EBlendFactor::OneMinusSrcAlpha, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA }
 };
 
-std::unordered_map<EBlendOp, VkBlendOp> BlendOpToVkBlendOpMap = {
+inline std::unordered_map<EBlendOp, VkBlendOp> BlendOpToVkBlendOpMap = {
 	{ EBlendOp::Add, VK_BLEND_OP_ADD },
 	{ EBlendOp::Subtract, VK_BLEND_OP_SUBTRACT },
 	{ EBlendOp::ReverseSubtract, VK_BLEND_OP_REVERSE_SUBTRACT },
@@ -39,7 +39,7 @@ std::unordered_map<EBlendOp, VkBlendOp> BlendOpToVkBlendOpMap = {
 	{ EBlendOp::Max, VK_BLEND_OP_MAX }
 };
 
-std::unordered_map<ECompareOp, VkCompareOp> CompareOpToVkCompareOpMap = {
+inline std::unordered_map<ECompareOp, VkCompareOp> CompareOpToVkCompareOpMap = {
 	{ ECompareOp::Less, VK_COMPARE_OP_LESS },
 	{ ECompareOp::LessEqual, VK_COMPARE_OP_LESS_OR_EQUAL },
 	{ ECompareOp::Equal, VK_COMPARE_OP_EQUAL },
@@ -50,18 +50,18 @@ std::unordered_map<ECompareOp, VkCompareOp> CompareOpToVkCompareOpMap = {
 	{ ECompareOp::Never, VK_COMPARE_OP_NEVER }
 };
 
-std::unordered_map<ECullMode, VkCullModeFlagBits> CullModeToVkCullModeMap = {
+inline std::unordered_map<ECullMode, VkCullModeFlagBits> CullModeToVkCullModeMap = {
 	{ ECullMode::None, VK_CULL_MODE_NONE },
 	{ ECullMode::Front, VK_CULL_MODE_FRONT_BIT },
 	{ ECullMode::Back, VK_CULL_MODE_BACK_BIT }
 };
 
-std::unordered_map<EFillMode, VkPolygonMode> FillModeToVkPolygonModeMap = {
+inline std::unordered_map<EFillMode, VkPolygonMode> FillModeToVkPolygonModeMap = {
 	{ EFillMode::Solid, VK_POLYGON_MODE_FILL },
 	{ EFillMode::Wireframe, VK_POLYGON_MODE_LINE }
 };
 
-std::unordered_map<EStencilOp, VkStencilOp> StencilOpToVkStencilOpMap = {
+inline std::unordered_map<EStencilOp, VkStencilOp> StencilOpToVkStencilOpMap = {
 	{ EStencilOp::Keep, VK_STENCIL_OP_KEEP },
 	{ EStencilOp::Zero, VK_STENCIL_OP_ZERO },
 	{ EStencilOp::Replace, VK_STENCIL_OP_REPLACE },
@@ -75,31 +75,31 @@ std::unordered_map<EStencilOp, VkStencilOp> StencilOpToVkStencilOpMap = {
 class VulkanDevice;
 class VulkanTextureView;
 
-class VulkanBindGroupLayout : public RBindGroupLayout
+class VulkanDescriptorSetLayout : public RDescriptorSetLayout
 {
 public:
-	VulkanBindGroupLayout(VulkanDevice* InDevice, const RBindGroupLayoutDescriptor& InDescriptor);
-	~VulkanBindGroupLayout();
-	virtual EResourceType getType() const override { return EResourceType::BindGroupLayout; }
+	VulkanDescriptorSetLayout(VulkanDevice* InDevice, const RDescriptorSetLayoutDescriptor& InDescriptor);
+	~VulkanDescriptorSetLayout();
+	virtual EResourceType getType() const override { return EResourceType::DescriptorSetLayout; }
 
 private:
 	void SetDebugName(const std::string& Name) override;
 	VulkanDevice* Device;
-	RBindGroupLayoutDescriptor Descriptor;
+	RDescriptorSetLayoutDescriptor Descriptor;
 
 };
 
-class VulkanBindGroup : public RBindGroup
+class VulkanDescriptorSet : public RDescriptorSet
 {
 public:
-	VulkanBindGroup(VulkanDevice* InDevice, const RBindGroupDescriptor& InDescriptor);
-	~VulkanBindGroup();
-	virtual EResourceType getType() const override { return EResourceType::BindGroup; }
+	VulkanDescriptorSet(VulkanDevice* InDevice, const RDescriptorSetDescriptor& InDescriptor);
+	~VulkanDescriptorSet();
+	virtual EResourceType getType() const override { return EResourceType::DescriptorSet; }
 
 private:
 	void SetDebugName(const std::string& Name) override;
 	VulkanDevice* Device;
-	RBindGroupDescriptor Descriptor;
+	RDescriptorSetDescriptor Descriptor;
 
 };
 

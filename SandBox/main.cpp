@@ -1,11 +1,8 @@
 #include <SDL3/SDL.h>
 #include <cstdio>
-#include "render.h"
 
 int main(int argc, char* argv[])
 {
-    RenderSomething();
-
     // 初始化 SDL 视频子系统
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("SDL_Init failed: %s", SDL_GetError());
