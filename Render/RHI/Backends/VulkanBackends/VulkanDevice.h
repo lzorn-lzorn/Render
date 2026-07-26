@@ -13,8 +13,8 @@ class VulkanTexture;
 class VulkanSampler;
 class VulkanShader;
 class VulkanPipelineState;
-class VulkanBindGroupLayout;
-class VulkanBindGroup;
+class VulkanDescriptorSetLayout;
+class VulkanDescriptorSet;
 class VulkanCommandList;
 class VulkanSwapchain;
 class VulkanFence;
@@ -25,16 +25,16 @@ public:
 	VulkanDevice();
 	~VulkanDevice() override;
 
-	RBuffer* createBuffer(const EBufferDescriptor& Descriptor) override;
-	RTexture* createTexture(const ETextureDescriptor& Descriptor) override;
-	RSampler* createSampler(const ESamplerDescriptor& Descriptor) override;
-	RShader* createShader(const EShaderDescriptor& Descriptor) override;
+	RBuffer* createBuffer(const RBufferDescriptor& Descriptor) override;
+	RTexture* createTexture(const RTextureDescriptor& Descriptor) override;
+	RSampler* createSampler(const RSamplerDescriptor& Descriptor) override;
+	RShader* createShader(const RShaderDescriptor& Descriptor) override;
 	RPipelineState* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) override;
 	RPipelineState* createComputePipeline(const RComputePipelineDescriptor& Descriptor) override;
-	RBindGroupLayout* createBindGroupLayout(const std::vector<RBindGroupLayoutEntry>& Descriptor) override;
-	RBindGroup* createBindGroup(const RBindGroupDescriptor& Descriptor) override;
+	RDescriptorSetLayout* createDescriptorSetLayout(const std::vector<RDescriptorSetLayoutEntry>& Descriptor) override;
+	RDescriptorSet* createDescriptorSet(const RDescriptorSetDescriptor& Descriptor) override;
 	RCommandList* createCommandList(ECommandQueueType Type) override;
-	RSwapchain* createSwapchain(const ETextureDescriptor& Descriptor) override;
+	RSwapchain* createSwapchain(const RSwapchainDescriptor& Descriptor) override;
 	RFence* createFence() override;
 
 	void submitCommandLists(ECommandQueueType Type, const QueueSubmitDescriptor& Descriptor) override;

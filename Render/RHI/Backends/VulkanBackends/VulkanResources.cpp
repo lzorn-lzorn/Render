@@ -8,7 +8,7 @@
 namespace render::rhi
 {
 
-VulkanBuffer::VulkanBuffer(VulkanDevice* InDevice, const EBufferDescriptor& InBufferDesc, VkBuffer InBuffer, VmaAllocation InAlloc)
+VulkanBuffer::VulkanBuffer(VulkanDevice* InDevice, const RBufferDescriptor& InBufferDesc, VkBuffer InBuffer, VmaAllocation InAlloc)
 	: Device(InDevice)
 	, BufferDesc(InBufferDesc)
 	, Buffer(InBuffer)
@@ -30,7 +30,7 @@ void VulkanBuffer::SetDebugName(const std::string& Name)
 	(void)Name;
 }
 
-VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const ETextureDescriptor& InTextureDesc, VkImage InImage, VmaAllocation InAlloc)
+VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc, VkImage InImage, VmaAllocation InAlloc)
 	: Device(InDevice)
 	, TextureDesc(InTextureDesc)
 	, Image(InImage)
@@ -50,7 +50,7 @@ VulkanTexture::~VulkanTexture()
 	}
 }
 
-RTextureView* VulkanTexture::createView(const ETextureViewDescriptor& Descriptor)
+RTextureView* VulkanTexture::createView(const RTextureViewDescriptor& Descriptor)
 {
 	if (!TextureView)
 	{
@@ -64,7 +64,7 @@ void VulkanTexture::SetDebugName(const std::string& Name)
 	(void)Name;
 }
 
-VulkanTextureView::VulkanTextureView(VulkanTexture* InTexture, const ETextureViewDescriptor& InDescriptor)
+VulkanTextureView::VulkanTextureView(VulkanTexture* InTexture, const RTextureViewDescriptor& InDescriptor)
 	: Texture(InTexture)
 	, Descriptor(InDescriptor)
 {
@@ -77,7 +77,7 @@ void VulkanTextureView::SetDebugName(const std::string& Name)
 	(void)Name;
 }
 
-VulkanSampler::VulkanSampler(VulkanDevice* InDevice, const ESamplerDescriptor& InSamplerDesc)
+VulkanSampler::VulkanSampler(VulkanDevice* InDevice, const RSamplerDescriptor& InSamplerDesc)
 	: Device(InDevice)
 	, SamplerDesc(InSamplerDesc)
 {

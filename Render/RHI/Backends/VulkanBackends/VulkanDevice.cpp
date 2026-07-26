@@ -16,22 +16,22 @@ VulkanDevice::VulkanDevice() = default;
 
 VulkanDevice::~VulkanDevice() = default;
 
-RBuffer* VulkanDevice::createBuffer(const EBufferDescriptor& Descriptor)
+RBuffer* VulkanDevice::createBuffer(const RBufferDescriptor& Descriptor)
 {
 	return new VulkanBuffer(this, Descriptor, VkBuffer{}, VmaAllocation{});
 }
 
-RTexture* VulkanDevice::createTexture(const ETextureDescriptor& Descriptor)
+RTexture* VulkanDevice::createTexture(const RTextureDescriptor& Descriptor)
 {
 	return new VulkanTexture(this, Descriptor, VkImage{}, VmaAllocation{});
 }
 
-RSampler* VulkanDevice::createSampler(const ESamplerDescriptor& Descriptor)
+RSampler* VulkanDevice::createSampler(const RSamplerDescriptor& Descriptor)
 {
 	return new VulkanSampler(this, Descriptor);
 }
 
-RShader* VulkanDevice::createShader(const EShaderDescriptor& Descriptor)
+RShader* VulkanDevice::createShader(const RShaderDescriptor& Descriptor)
 {
 	return new VulkanShader(this, Descriptor, VkShaderModule{});
 }
@@ -63,7 +63,7 @@ RCommandList* VulkanDevice::createCommandList(ECommandQueueType Type)
 	return new VulkanCommandList(this, Type);
 }
 
-RSwapchain* VulkanDevice::createSwapchain(const ETextureDescriptor& Descriptor)
+RSwapchain* VulkanDevice::createSwapchain(const RTextureDescriptor& Descriptor)
 {
 	RSwapchainDescriptor SwapchainDescriptor;
 	SwapchainDescriptor.Width = Descriptor.Width;

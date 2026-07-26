@@ -8,7 +8,7 @@ namespace render::rhi
 {
 
 
-VulkanShader::VulkanShader(VulkanDevice* InDevice, const EShaderDescriptor& InShaderDesc, VkShaderModule InShaderModule)
+VulkanShader::VulkanShader(VulkanDevice* InDevice, const RShaderDescriptor& InShaderDesc, VkShaderModule InShaderModule)
 	: Device(InDevice)
 	, ShaderDesc(InShaderDesc)
 	, ShaderModule(InShaderModule)

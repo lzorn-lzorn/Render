@@ -22,7 +22,7 @@ public:
 
 	void setGraphicsPipeline(class RPipelineState* Pipeline) override;
 	void setComputePipeline(class RPipelineState* Pipeline) override;
-	void setBindGroup(uint32_t Index, class RBindGroup* BindGroup) override;
+	void setDescriptorSet(uint32_t Index, class RDescriptorSet* DescriptorSet) override;
 	void setVertexBuffer(uint32_t Slot, class RBuffer* Buffer) override;
 	void setIndexBuffer(class RBuffer* Buffer, EIndexFormat Format) override;
 	void setViewport(const RViewport& Viewport) override;

@@ -40,12 +40,6 @@ void VulkanCommandList::setComputePipeline(RPipelineState* Pipeline)
 	(void)Pipeline;
 }
 
-void VulkanCommandList::setBindGroup(uint32_t Index, RBindGroup* BindGroup)
-{
-	(void)Index;
-	(void)BindGroup;
-}
-
 void VulkanCommandList::setVertexBuffer(uint32_t Slot, RBuffer* Buffer)
 {
 	(void)Slot;
