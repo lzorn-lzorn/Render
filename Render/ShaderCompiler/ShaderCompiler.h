@@ -11,6 +11,7 @@ namespace render
 {
 
 using rhi::EShaderStage;
+using rhi::EDescriptorType;
 
 enum class EShaderDiagnosticSeverity
 {
@@ -33,7 +34,7 @@ struct RDescriptorRequirement
 	uint32_t Set;
 	uint32_t Binding;
 	uint32_t Count;
-	uint32_t DescriptorType;
+	EDescriptorType DescriptorType;
 	std::string name;
 };
 

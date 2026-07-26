@@ -428,6 +428,10 @@ struct RComputePipelineDescriptor
 {
 	class RShader* ComputeShader = nullptr;
 };
+
+
+
+
 struct RTextureViewDescriptor
 {
 	enum class EViewType
@@ -510,6 +514,31 @@ struct RDescriptorSetDescriptor
 	std::vector<RDescriptorBinding> Bindings;
 };
 
+struct RPushConstantRangeLimits
+{
+	uint32_t MaxSize = 128;
+	uint32_t MaxRanges = 4;
+};
+struct RPushConstantRange
+{
+	EShaderStage VisibleStage;
+	uint32_t Offset;
+	uint32_t Size;
+};
+
+struct RPipelineLayoutDescriptor
+{
+	std::vector<RDescriptorSetLayout*> DescriptorSetLayouts;
+	std::vector<RPushConstantRange> PushConstantRanges;
+};
+
+struct RPipelineLayout : public RResource
+{
+	virtual uint32_t getDescriptorSetLayoutCount() const = 0;
+	virtual RDescriptorSetLayout* getDescriptorSetLayout(uint32_t Index) const = 0;
+	virtual uint32_t getPushConstantRangeCount() const = 0;
+
+};
 
 struct RViewport 
 {
@@ -623,6 +652,7 @@ public:
 	virtual void setIndexBuffer(class RBuffer* Buffer, EIndexFormat Format) = 0;
 	virtual void setViewport(const RViewport& Viewport) = 0;
 	virtual void setScissorRect(const RRect& Rect) = 0;
+	virtual void setPushConstants(EShaderStage stage, uint32_t offset, uint32_t size, const void* data) = 0;
 
 	virtual void draw(uint32_t VertexCount, uint32_t InstanceCount = 1, uint32_t FirstVertex = 0, uint32_t FirstInstance = 0) = 0;
 	virtual void drawIndexed(uint32_t IndexCount, uint32_t InstanceCount = 1, uint32_t FirstIndex = 0, int32_t VertexOffset = 0, uint32_t FirstInstance = 0) = 0;
