@@ -1,6 +1,8 @@
 build
 Build
 
+.cache
+
 cmake-release-build
 cmake-debug-build
 
