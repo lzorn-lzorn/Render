@@ -6,7 +6,7 @@
 #include <span>
 
 #include "RHI/Definitions.h"
-#include "Material.h"
+#include "Materials/Material.h"
 #include "Geometry.h"
 #include "ShaderCompiler/ShaderCompiler.h"
 #include "ShaderCompiler/DrawConstants.h"
@@ -16,9 +16,13 @@ namespace render
 using rhi::RShaderHandle;
 using rhi::RClearValue;
 
+template <typename WindowHandle>
+class RendererBuilder;
+
 template <typename InPlatformType>
 class Renderer
 {
+	template <typename WindowHandle>
 	friend class RendererBuilder;
 
 	using PlatformType = InPlatformType;

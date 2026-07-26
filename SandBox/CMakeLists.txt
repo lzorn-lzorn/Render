@@ -24,7 +24,12 @@ endif()
 
 add_executable(SandBox main.cpp)
 
-target_link_libraries(SandBox PRIVATE Render)
+target_link_libraries(SandBox PRIVATE Renderer)
+target_link_libraries(SandBox PRIVATE dxcompiler)
+
+target_include_directories(SandBox PRIVATE
+    ${CMAKE_SOURCE_DIR}/glm
+)
 
 if(TARGET SDL3::SDL3)
     target_link_libraries(SandBox PRIVATE SDL3::SDL3)
@@ -35,9 +40,17 @@ else()
 endif()
 
 if (WIN32)
-	add_custom_command(TARGET SandBox POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		$<TARGET_FILE:SDL3::SDL3>
-		$<TARGET_FILE_DIR:SandBox>
-	)
+    if(TARGET SDL3::SDL3)
+        add_custom_command(TARGET SandBox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:SDL3::SDL3>
+            $<TARGET_FILE_DIR:SandBox>
+        )
+    endif()
+
+    add_custom_command(TARGET SandBox POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/Assets
+        $<TARGET_FILE_DIR:SandBox>/Assets
+    )
 endif()

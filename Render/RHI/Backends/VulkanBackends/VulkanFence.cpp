@@ -1,9 +1,5 @@
-
-#include "../../Definitions.h"
 #include "VulkanFence.h"
 #include "VulkanDevice.h"
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
 
 namespace render::rhi
 {
@@ -12,15 +8,35 @@ namespace render::rhi
 VulkanFence::VulkanFence(VulkanDevice* InDevice)
 	: Device(InDevice)
 {
+	if (!Device || !Device->isValid())
+	{
+		return;
+	}
+
+	VkFenceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	createInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	vkCreateFence(Device->getVkDevice(), &createInfo, nullptr, &Fence);
 }
 
 VulkanFence::~VulkanFence()
 {
-	const auto vkDevice = Device ? reinterpret_cast<VkDevice>(Device->getDeviceHandle()) : VkDevice{};
-	if (vkDevice != VkDevice{} && Fence != VkFence{})
+	if (!Device)
+	{
+		return;
+	}
+
+	const VkDevice vkDevice = Device->getVkDevice();
+	if (vkDevice != VK_NULL_HANDLE && Fence != VK_NULL_HANDLE)
 	{
 		vkDestroyFence(vkDevice, Fence, nullptr);
+		Fence = VK_NULL_HANDLE;
 	}
+}
+
+bool VulkanFence::isValid() const noexcept
+{
+	return Fence != VK_NULL_HANDLE;
 }
 
 void VulkanFence::signal(uint64_t Value)
@@ -38,6 +54,12 @@ void VulkanFence::wait(uint64_t Value)
 	if (CompletedValue < Value)
 	{
 		CompletedValue = Value;
+	}
+
+	if (Device && Fence != VK_NULL_HANDLE)
+	{
+		vkWaitForFences(Device->getVkDevice(), 1, &Fence, VK_TRUE, UINT64_MAX);
+		vkResetFences(Device->getVkDevice(), 1, &Fence);
 	}
 }
 

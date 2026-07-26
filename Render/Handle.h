@@ -55,6 +55,7 @@ public:
     ObjectType* get() noexcept { return Object.get(); }
     const ObjectType* get() const noexcept { return Object.get(); }
 
+	ObjectType* operator->() noexcept { return Object.get(); }
 	const ObjectType* operator->() const noexcept { return Object.get(); }	
 private:
     std::unique_ptr<ObjectType> Object;

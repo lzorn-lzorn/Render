@@ -1,83 +1,105 @@
-
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
 #include "../../Definitions.h"
+
+#include <vulkan/vulkan.h>
+
+#include <vector>
 
 namespace render::rhi
 {
 
 class VulkanDevice;
+
 class VulkanBuffer : public RBuffer
 {
 public:
-	VulkanBuffer(VulkanDevice* InDevice, const RBufferDescriptor& InBufferDesc, VkBuffer InBuffer, VmaAllocation InAlloc);
+	VulkanBuffer(VulkanDevice* InDevice, const RBufferDescriptor& InBufferDesc);
+	~VulkanBuffer() override;
 
-	~VulkanBuffer();
-	uint64_t getSize() const override { return BufferDesc.Size; }
-	VkBuffer getVkBuffer() const { return Buffer; }
-	VmaAllocation getAllocation() const { return Alloc; }
+	bool isValid() const override;
+	uint64_t getSize() const override;
+	VkBuffer getVkBuffer() const noexcept { return Buffer; }
 
 private:
 	void SetDebugName(const std::string& Name) override;
-	VulkanDevice* Device;
-	RBufferDescriptor BufferDesc;
-	VkBuffer Buffer;
-	VmaAllocation Alloc;
+
+	VulkanDevice* Device = nullptr;
+	RBufferDescriptor BufferDesc{};
+	VkBuffer Buffer = VK_NULL_HANDLE;
+	VkDeviceMemory Memory = VK_NULL_HANDLE;
 };
+
+class VulkanTextureView;
 
 class VulkanTexture : public RTexture
 {
 public:
-	VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc, VkImage InImage, VmaAllocation InAlloc);
+	VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc);
+	VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc, VkImage InExternalImage, VkImageView InExternalView);
+	~VulkanTexture() override;
 
-	~VulkanTexture();
+	bool isValid() const override;
 	uint32_t getWidth() const override { return TextureDesc.Width; }
 	uint32_t getHeight() const override { return TextureDesc.Height; }
 	uint32_t getDepth() const override { return TextureDesc.Depth; }
-	VkImage getVkImage() const { return Image; }
-	VmaAllocation getAllocation() const { return Alloc; }
+	EFormat getFormat() const override { return TextureDesc.Format; }
 
 	RTextureView* createView(const RTextureViewDescriptor& Descriptor) override;
-	RTextureView* getDefaultView() { return TextureView; }
-	EFormat getFormat() const override { return TextureDesc.Format; }
+	RTextureView* getDefaultView() const noexcept { return DefaultView; }
+
+	VkImage getVkImage() const noexcept { return Image; }
+	VkImageAspectFlags getAspectMask() const noexcept;
+	VulkanDevice* getDevice() const noexcept { return Device; }
+
 private:
 	void SetDebugName(const std::string& Name) override;
-	VulkanDevice* Device;
-	RTextureView* TextureView = nullptr;
-	RTextureDescriptor TextureDesc;
-	VkImage Image;
-	VmaAllocation Alloc;
-};
 
+	VulkanDevice* Device = nullptr;
+	RTextureDescriptor TextureDesc{};
+	VkImage Image = VK_NULL_HANDLE;
+	VkDeviceMemory Memory = VK_NULL_HANDLE;
+	bool OwnsImage = true;
+
+	RTextureView* DefaultView = nullptr;
+	std::vector<RTextureView*> Views;
+};
 
 class VulkanTextureView : public RTextureView
 {
 public:
-	VulkanTextureView(VulkanTexture* InTexture, const RTextureViewDescriptor& InDescriptor);
-	~VulkanTextureView();
-	virtual EResourceType getType() const override { return EResourceType::Texture; }
-	virtual RTexture* getTexture() const override { return Texture; }
-	virtual RTextureViewDescriptor getDescriptor() const override { return Descriptor; }
+	VulkanTextureView(VulkanTexture* InTexture, const RTextureViewDescriptor& InDescriptor, VkImageView InView, bool bInOwnsView);
+	~VulkanTextureView() override;
+
+	bool isValid() const override;
+	RTexture* getTexture() const override { return Texture; }
+	RTextureViewDescriptor getDescriptor() const override { return Descriptor; }
+	VkImageView getVkImageView() const noexcept { return View; }
+
 private:
 	void SetDebugName(const std::string& Name) override;
-	VulkanTexture* Texture;
-	RTextureViewDescriptor Descriptor;
+
+	VulkanTexture* Texture = nullptr;
+	RTextureViewDescriptor Descriptor{};
+	VkImageView View = VK_NULL_HANDLE;
+	bool OwnsView = true;
 };
 
 class VulkanSampler : public RSampler
 {
 public:
 	VulkanSampler(VulkanDevice* InDevice, const RSamplerDescriptor& InSamplerDesc);
-	~VulkanSampler();
-	virtual EResourceType getType() const override { return EResourceType::Sampler; }
+	~VulkanSampler() override;
+
+	bool isValid() const override;
+	VkSampler getVkSampler() const noexcept { return Sampler; }
 
 private:
 	void SetDebugName(const std::string& Name) override;
-	VulkanDevice* Device;
-	RSamplerDescriptor SamplerDesc;
-	VkSampler Sampler = VK_NULL_HANDLE;
 
+	VulkanDevice* Device = nullptr;
+	RSamplerDescriptor SamplerDesc{};
+	VkSampler Sampler = VK_NULL_HANDLE;
 };
-}
+
+} // namespace render::rhi

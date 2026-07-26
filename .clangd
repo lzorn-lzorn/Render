@@ -1,13 +1,26 @@
 CompileFlags:
   CompilationDatabase: build
   Add:
+    - -x
+    - c++
     - -std=c++23
-    - -IRender
-    - -ISandBox/SDL/include
-    - -Ibuild/SandBox/SDL/include-revision
+    - --target=x86_64-pc-windows-msvc
+    - -fms-extensions
+    - -fms-compatibility
+    - -DWIN32
+    - -DWIN64
+    - -D_WINDOWS
+    - -D_M_AMD64
+    - -DNOMINMAX
+    - -DWIN32_LEAN_AND_MEAN
+    - -DVK_USE_PLATFORM_WIN32_KHR
+    - -IE:/Code/Render/Render
+    - -IE:/Code/Render/Render/include
+    - -IE:/Code/Render/Render/SPIRV-Reflect
+    - -IE:/Code/Render/glm
+    - -IE:/Code/Render/SandBox/SDL/include
+    - -IE:/Code/Render/build/SandBox/SDL/include-revision
     - -IE:/Vulkan/include
-    - -include
-    - vulkan/vulkan.h
 
 Index:
   Background: Build
@@ -15,3 +28,6 @@ Index:
 Completion:
   AllScopes: Yes
   HeaderInsertion: IWYU
+
+Diagnostics:
+  UnusedIncludes: None

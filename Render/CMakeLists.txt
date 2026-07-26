@@ -38,9 +38,8 @@ if (WIN32)
 endif()
 
 target_link_libraries(${LibarayName} 
-	PUBLIC 
+    PRIVATE 
 		dxcompiler
-		spirv-reflect-static
 )
 
 target_include_directories(${LibarayName} 

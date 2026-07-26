@@ -1,16 +1,21 @@
 
-#pragma once 
+#pragma once
+
 #include <cstddef>
+#include <cstdint>
+#include <memory>
+
 #include <SDL3/SDL.h>
 
-#include "Render/RHI/Definitions.h"
-#include "Render/Renderer.h"
+#include "RHI/Definitions.h"
+#include "Renderer.h"
 
 namespace render
 {
 template <typename WindowHandle>
 class RendererBuilder;
 
+template <>
 class RendererBuilder<SDL_Window>
 {
 public:
@@ -19,11 +24,11 @@ public:
 
 	RendererBuilder& setWidth(uint32_t InWidth) { Width = InWidth; return *this; }
 	RendererBuilder& setHeight(uint32_t InHeight) { Height = InHeight; return *this; }
-	RendererBuilder& setSampleCount(ESampleCount InSampleCount) { SampleCount = InSampleCount; return *this; }
-	RendererBuilder& setColorFormat(EFormat InColorFormat) { ColorFormat = InColorFormat; return *this; }
-	RendererBuilder& setDepthFormat(EFormat InDepthFormat) { DepthFormat = InDepthFormat; return *this; }
+	RendererBuilder& setSampleCount(rhi::ESampleCount InSampleCount) { SampleCount = InSampleCount; return *this; }
+	RendererBuilder& setColorFormat(rhi::EFormat InColorFormat) { ColorFormat = InColorFormat; return *this; }
+	RendererBuilder& setDepthFormat(rhi::EFormat InDepthFormat) { DepthFormat = InDepthFormat; return *this; }
 
-	std::unique_ptr<Renderer> build();
+	std::unique_ptr<Renderer<SDL_Window>> build();
 
 private:
 	uint32_t Width = 0;
@@ -31,9 +36,9 @@ private:
 	const char* Title = nullptr;
 	bool bIsVSyncEnabled = true;
 	bool bIsValidationEnabled = false;
-	ESampleCount SampleCount = ESampleCount::COUNT_1;
-	EFormat ColorFormat = EFormat::UNKNOWN;
-	EFormat DepthFormat = EFormat::UNKNOWN;
+	rhi::ESampleCount SampleCount = rhi::ESampleCount::Count1;
+	rhi::EFormat ColorFormat = rhi::EFormat::Undefined;
+	rhi::EFormat DepthFormat = rhi::EFormat::Undefined;
 };
 
 } // namespace render

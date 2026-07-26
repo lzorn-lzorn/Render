@@ -74,6 +74,11 @@ inline EBufferUsage operator|(EBufferUsage a, EBufferUsage b)
 	return static_cast<EBufferUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
 
+inline EBufferUsage operator&(EBufferUsage a, EBufferUsage b)
+{
+	return static_cast<EBufferUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
 enum class ETextureUsage : uint32_t
 {
 	None         = 0,
@@ -90,6 +95,11 @@ inline ETextureUsage operator|(ETextureUsage a, ETextureUsage b)
 	return static_cast<ETextureUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
 
+inline ETextureUsage operator&(ETextureUsage a, ETextureUsage b)
+{
+	return static_cast<ETextureUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
 enum class EShaderStage : uint32_t
 {
 	Vertex        = 1 << 0,
@@ -99,6 +109,16 @@ enum class EShaderStage : uint32_t
 	Mesh	      = 1 << 4,
 	Amplification = 1 << 5,
 };
+
+inline EShaderStage operator|(EShaderStage a, EShaderStage b)
+{
+	return static_cast<EShaderStage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline EShaderStage operator&(EShaderStage a, EShaderStage b)
+{
+	return static_cast<EShaderStage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
 
 enum class ECommandQueueType
 {
@@ -247,6 +267,8 @@ struct RBufferDescriptor
 	EBufferUsage Usage = EBufferUsage::None;
 	uint32_t Size = 0;
 	bool IsCpuVisible = false;
+	const void* InitialData = nullptr;
+	uint32_t InitialDataSize = 0;
 	std::string Name;
 };
 
@@ -478,7 +500,7 @@ struct RRenderPassDescriptor
 {
 	std::array<RRenderTargetAttachment, 8> ColorAttachments;
 	uint32_t ColorAttachmentCount = 0;
-	RDepthStencilAttachment* DepthStencilAttachment;
+	RDepthStencilAttachment* DepthStencilAttachment = nullptr;
 };
 
 struct RResourceBarrier
@@ -674,6 +696,8 @@ public:
 	virtual RTexture* acquireNextTexture() = 0;
 	virtual void present() = 0;
 	virtual void resize(uint32_t Width, uint32_t Height) = 0;
+	virtual uint32_t getCurrentTextureIndex() const = 0;
+	virtual uint32_t getTextureCount() const = 0;
 	virtual EFormat getFormat() const = 0;
 	virtual uint32_t getWidth() const = 0;
 	virtual uint32_t getHeight() const = 0;
@@ -697,6 +721,7 @@ struct RSwapchainDescriptor
 	EFormat Format = EFormat::BGRA8_UNorm;
 	uint32_t BufferCount = 3;
 	bool VSync = true;
+	void* NativeWindowHandle = nullptr;
 	std::string Name;
 };
 
