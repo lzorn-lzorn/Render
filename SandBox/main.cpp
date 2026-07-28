@@ -21,7 +21,6 @@
 
 #include "Handle.h"
 #include "RHI/Definitions.h"
-#include "RHI/VulkanFactory.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -421,7 +420,7 @@ int main(int argc, char* argv[])
 
     try
     {
-        auto device = rhi::CreateVulkanDevice();
+        auto device = rhi::CreateDevice(rhi::ESupportedBackendAPI::Vulkan);
         if (!device)
         {
             throw std::runtime_error("Failed to create Vulkan RHI device");

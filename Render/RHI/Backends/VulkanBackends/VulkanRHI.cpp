@@ -1,7 +1,6 @@
 #include "VulkanRHI.h"
 
 #include "VulkanDevice.h"
-#include "../../VulkanFactory.h"
 
 #include <memory>
 
@@ -276,6 +275,7 @@ bool IsDepthFormat(EFormat format)
 	return format == EFormat::D24_UNorm_S8_UInt || format == EFormat::D32_Float;
 }
 
+
 std::unique_ptr<RDevice> CreateVulkanDevice()
 {
 	auto device = std::make_unique<VulkanDevice>();
@@ -286,4 +286,27 @@ std::unique_ptr<RDevice> CreateVulkanDevice()
 	return device;
 }
 
+
+std::unique_ptr<RDevice> CreateDevice(ESupportedBackendAPI API)
+{
+	if (API == ESupportedBackendAPI::Vulkan)
+	{
+		return CreateVulkanDevice();
+	}
+	return nullptr;
+}
+
+std::unique_ptr<RDevice> CreateDevice(const char* APIName)
+{
+	if (!APIName)
+	{
+		return nullptr;
+	}
+
+	if (strcmp(APIName, "Vulkan") == 0)
+	{
+		return CreateVulkanDevice();
+	}
+	return nullptr;
+}
 } // namespace render::rhi

@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 #include <span>
@@ -14,6 +15,10 @@ namespace render::rhi
 using DeviceSizeType = uint64_t; // device memory size and offset values
 // Vk: typedef uint64_t VkDeviceSize;
 
+enum class ESupportedBackendAPI
+{
+	Vulkan
+};
 enum class EResourceType
 {
 	Buffer,
@@ -762,6 +767,7 @@ public:
 	virtual void destroyResource(RResource* Resource) = 0;
 };
 
-
+std::unique_ptr<RDevice> CreateDevice(ESupportedBackendAPI API);
+std::unique_ptr<RDevice> CreateDevice(const char* APIName);
 
 } // namespace render::rhi

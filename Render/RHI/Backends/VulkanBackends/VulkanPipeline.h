@@ -9,6 +9,13 @@ namespace render::rhi
 
 class VulkanDevice;
 
+class VulkanPipeline
+{
+
+
+};
+
+
 class VulkanPipelineState : public RPipelineState
 {
 public:
