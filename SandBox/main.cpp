@@ -599,7 +599,7 @@ int main(int argc, char* argv[])
         pipelineDesc.PrimitiveTopology = rhi::EPrimitiveTopology::TriangleList;
         pipelineDesc.SampleCount = 1;
 
-        Handle<rhi::RPipelineState> pipeline(device->createGraphicsPipeline(pipelineDesc));
+        Handle<rhi::RPipeline> pipeline(device->createGraphicsPipeline(pipelineDesc));
         if (!pipeline.valid() || !pipeline->isValid())
         {
             throw std::runtime_error("Failed to create graphics pipeline");
@@ -618,7 +618,7 @@ int main(int argc, char* argv[])
         edgePipelineDesc.PrimitiveTopology = rhi::EPrimitiveTopology::LineList;
         edgePipelineDesc.SampleCount = 1;
 
-        Handle<rhi::RPipelineState> edgePipeline(device->createGraphicsPipeline(edgePipelineDesc));
+        Handle<rhi::RPipeline> edgePipeline(device->createGraphicsPipeline(edgePipelineDesc));
         if (!edgePipeline.valid() || !edgePipeline->isValid())
         {
             throw std::runtime_error("Failed to create edge pipeline");

@@ -109,12 +109,12 @@ RShader* VulkanDevice::createShader(const RShaderDescriptor& Descriptor)
 	return new VulkanShader(this, Descriptor);
 }
 
-RPipelineState* VulkanDevice::createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor)
+RPipeline* VulkanDevice::createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor)
 {
 	return CreateVulkanGraphicsPipeline(this, Descriptor);
 }
 
-RPipelineState* VulkanDevice::createComputePipeline(const RComputePipelineDescriptor& Descriptor)
+RPipeline* VulkanDevice::createComputePipeline(const RComputePipelineDescriptor& Descriptor)
 {
 	return CreateVulkanComputePipeline(this, Descriptor);
 }

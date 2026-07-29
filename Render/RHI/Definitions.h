@@ -682,8 +682,8 @@ public:
 	virtual void beginRenderPass(const RRenderPassDescriptor& Descriptor) = 0;
 	virtual void endRenderPass() = 0;
 
-	virtual void setGraphicsPipeline(class RPipelineState* Pipeline) = 0;
-	virtual void setComputePipeline(class RPipelineState* Pipeline) = 0;
+	virtual void setGraphicsPipeline(class RPipeline* Pipeline) = 0;
+	virtual void setComputePipeline(class RPipeline* Pipeline) = 0;
 	virtual void setDescriptorSet(uint32_t Index, class RDescriptorSet* DescriptorSet) = 0;
 	virtual void setVertexBuffer(uint32_t Slot, class RBuffer* Buffer) = 0;
 	virtual void setIndexBuffer(class RBuffer* Buffer, EIndexFormat Format) = 0;
@@ -750,8 +750,8 @@ public:
 	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor) = 0;
 	virtual RSampler* createSampler(const RSamplerDescriptor& Descriptor) = 0;
 	virtual RShader* createShader(const RShaderDescriptor& Descriptor) = 0;
-	virtual RPipelineState* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) = 0;
-	virtual RPipelineState* createComputePipeline(const RComputePipelineDescriptor& Descriptor) = 0;
+	virtual RPipeline* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) = 0;
+	virtual RPipeline* createComputePipeline(const RComputePipelineDescriptor& Descriptor) = 0;
 	virtual RDescriptorSetLayout* createDescriptorSetLayout(const RDescriptorSetLayoutDescriptor& Descriptor) = 0;
 	virtual RDescriptorSet* createDescriptorSet(const RDescriptorSetDescriptor& Descriptor) = 0;
 	
