@@ -6,6 +6,7 @@
 
 #include <array>
 #include <vector>
+#include <type_traits>
 
 namespace render::rhi
 {
@@ -52,15 +53,15 @@ VkPipelineLayout CreatePipelineLayout(VkDevice device)
 
 } // namespace
 
-VulkanPipelineState::VulkanPipelineState(VulkanDevice* InDevice, VkPipeline InPipeline, VkPipelineLayout InLayout, bool bInIsGraphicsPipeline)
+VulkanPipeline::VulkanPipeline(VulkanDevice* InDevice, VkPipeline InPipeline, VkPipelineLayout InLayout, EPipelineType InPipelineType)
 	: Device(InDevice)
-	, bIsGraphicsPipeline(bInIsGraphicsPipeline)
+	, PipelineType(InPipelineType)
 	, Pipeline(InPipeline)
 	, Layout(InLayout)
 {
 }
 
-VulkanPipelineState::~VulkanPipelineState()
+VulkanPipeline::~VulkanPipeline()
 {
 	if (!Device)
 	{
@@ -86,40 +87,41 @@ VulkanPipelineState::~VulkanPipelineState()
 	}
 }
 
-bool VulkanPipelineState::isValid() const
+bool VulkanPipeline::isValid() const
 {
 	return Pipeline != VK_NULL_HANDLE && Layout != VK_NULL_HANDLE;
 }
 
-VkPipelineBindPoint VulkanPipelineState::getBindPoint() const noexcept
+VkPipelineBindPoint VulkanPipeline::getBindPoint() const noexcept
 {
-	return bIsGraphicsPipeline ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE;
+	return PipelineType == EPipelineType::Graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE;
 }
 
-void VulkanPipelineState::SetDebugName(const std::string& Name)
+void VulkanPipeline::SetDebugName(const std::string& Name)
 {
 	(void)Name;
 }
 
-VulkanPipelineState* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphicsPipelineDescriptor& Descriptor)
+VulkanPipeline* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphicsPipelineDescriptor& Descriptor)
 {
 	if (!Device || !Device->isValid())
 	{
-		return new VulkanPipelineState(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, true);
+		return new VulkanPipeline(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, EPipelineType::Graphics);
 	}
 
-	auto* vertexShader = dynamic_cast<VulkanShader*>(Descriptor.VertexShader);
-	auto* pixelShader = dynamic_cast<VulkanShader*>(Descriptor.PixelShader);
+	auto* vertexShader = static_cast<VulkanShader*>(Descriptor.VertexShader);
+	auto* pixelShader = static_cast<VulkanShader*>(Descriptor.PixelShader);
+
 	if (!vertexShader || !pixelShader || !vertexShader->isValid() || !pixelShader->isValid() || Descriptor.RenderTargetCount == 0)
 	{
-		return new VulkanPipelineState(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, true);
+		return new VulkanPipeline(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, EPipelineType::Graphics);
 	}
 
 	VkDevice vkDevice = Device->getVkDevice();
 	VkPipelineLayout layout = CreatePipelineLayout(vkDevice);
 	if (layout == VK_NULL_HANDLE)
 	{
-		return new VulkanPipelineState(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, true);
+		return new VulkanPipeline(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, EPipelineType::Graphics);
 	}
 
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
@@ -282,27 +284,27 @@ VulkanPipelineState* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RG
 		layout = VK_NULL_HANDLE;
 	}
 
-	return new VulkanPipelineState(Device, pipeline, layout, true);
+	return new VulkanPipeline(Device, pipeline, layout, EPipelineType::Graphics);
 }
 
-VulkanPipelineState* CreateVulkanComputePipeline(VulkanDevice* Device, const RComputePipelineDescriptor& Descriptor)
+VulkanPipeline* CreateVulkanComputePipeline(VulkanDevice* Device, const RComputePipelineDescriptor& Descriptor)
 {
 	if (!Device || !Device->isValid())
 	{
-		return new VulkanPipelineState(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, false);
+		return new VulkanPipeline(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, EPipelineType::None);
 	}
 
 	auto* computeShader = dynamic_cast<VulkanShader*>(Descriptor.ComputeShader);
 	if (!computeShader || !computeShader->isValid())
 	{
-		return new VulkanPipelineState(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, false);
+		return new VulkanPipeline(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, EPipelineType::None);
 	}
 
 	VkDevice vkDevice = Device->getVkDevice();
 	VkPipelineLayout layout = CreatePipelineLayout(vkDevice);
 	if (layout == VK_NULL_HANDLE)
 	{
-		return new VulkanPipelineState(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, false);
+		return new VulkanPipeline(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, EPipelineType::None);
 	}
 
 	VkPipelineShaderStageCreateInfo shaderStage{};
@@ -323,7 +325,7 @@ VulkanPipelineState* CreateVulkanComputePipeline(VulkanDevice* Device, const RCo
 		layout = VK_NULL_HANDLE;
 	}
 
-	return new VulkanPipelineState(Device, pipeline, layout, false);
+	return new VulkanPipeline(Device, pipeline, layout, EPipelineType::Compute);
 }
 
 } // namespace render::rhi

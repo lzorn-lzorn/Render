@@ -132,6 +132,13 @@ enum class ECommandQueueType
 	Copy
 };
 
+enum class EPipelineType
+{
+	None,
+	Graphics,
+	Compute
+};
+
 enum class ELoadOp
 {
 	Load,
@@ -567,6 +574,15 @@ struct RPipelineLayout : public RResource
 
 };
 
+class RPipeline : public RResource
+{
+public:
+	virtual EResourceType getType() const override { return EResourceType::Pipeline; }
+	virtual bool isGraphicsPipeline() const = 0;
+	virtual bool isComputePipeline() const = 0;
+	virtual EPipelineType getPipelineType() const = 0;
+};
+
 struct RViewport 
 {
 	float X = 0.0f;
@@ -639,12 +655,6 @@ public:
 	virtual EShaderStage getStage() const = 0;
 };
 
-class RPipelineState : public RResource
-{
-public:
-	virtual EResourceType getType() const override { return EResourceType::Pipeline; }
-	virtual bool isGraphicsPipeline() const = 0;
-};
 
 class RDescriptorSetLayout : public RResource
 {
