@@ -185,9 +185,9 @@ void VulkanCommandList::endRenderPass()
 	}
 }
 
-void VulkanCommandList::setGraphicsPipeline(RPipelineState* Pipeline)
+void VulkanCommandList::setGraphicsPipeline(RPipeline* Pipeline)
 {
-	auto* vkPipeline = dynamic_cast<VulkanPipelineState*>(Pipeline);
+	auto* vkPipeline = dynamic_cast<VulkanPipeline*>(Pipeline);
 	if (!vkPipeline || !vkPipeline->isValid() || CommandBuffer == VK_NULL_HANDLE)
 	{
 		return;
@@ -198,9 +198,9 @@ void VulkanCommandList::setGraphicsPipeline(RPipelineState* Pipeline)
 	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline->getVkPipeline());
 }
 
-void VulkanCommandList::setComputePipeline(RPipelineState* Pipeline)
+void VulkanCommandList::setComputePipeline(RPipeline* Pipeline)
 {
-	auto* vkPipeline = dynamic_cast<VulkanPipelineState*>(Pipeline);
+	auto* vkPipeline = dynamic_cast<VulkanPipeline*>(Pipeline);
 	if (!vkPipeline || !vkPipeline->isValid() || CommandBuffer == VK_NULL_HANDLE)
 	{
 		return;

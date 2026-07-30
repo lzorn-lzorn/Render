@@ -682,8 +682,8 @@ public:
 	virtual void beginRenderPass(const RRenderPassDescriptor& Descriptor) = 0;
 	virtual void endRenderPass() = 0;
 
-	virtual void setGraphicsPipeline(class RPipelineState* Pipeline) = 0;
-	virtual void setComputePipeline(class RPipelineState* Pipeline) = 0;
+	virtual void setGraphicsPipeline(class RPipeline* Pipeline) = 0;
+	virtual void setComputePipeline(class RPipeline* Pipeline) = 0;
 	virtual void setDescriptorSet(uint32_t Index, class RDescriptorSet* DescriptorSet) = 0;
 	virtual void setVertexBuffer(uint32_t Slot, class RBuffer* Buffer) = 0;
 	virtual void setIndexBuffer(class RBuffer* Buffer, EIndexFormat Format) = 0;

@@ -22,8 +22,8 @@ public:
 	void beginRenderPass(const RRenderPassDescriptor& Descriptor) override;
 	void endRenderPass() override;
 
-	void setGraphicsPipeline(class RPipelineState* Pipeline) override;
-	void setComputePipeline(class RPipelineState* Pipeline) override;
+	void setGraphicsPipeline(class RPipeline* Pipeline) override;
+	void setComputePipeline(class RPipeline* Pipeline) override;
 	void setDescriptorSet(uint32_t Index, class RDescriptorSet* DescriptorSet) override;
 	void setVertexBuffer(uint32_t Slot, class RBuffer* Buffer) override;
 	void setIndexBuffer(class RBuffer* Buffer, EIndexFormat Format) override;

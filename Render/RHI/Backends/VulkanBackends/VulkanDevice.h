@@ -17,7 +17,7 @@ class VulkanBuffer;
 class VulkanTexture;
 class VulkanSampler;
 class VulkanShader;
-class VulkanPipelineState;
+class VulkanPipeline;
 class VulkanDescriptorSetLayout;
 class VulkanDescriptorSet;
 class VulkanCommandList;
