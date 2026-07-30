@@ -13,10 +13,10 @@ VulkanFence::VulkanFence(VulkanDevice* InDevice)
 		return;
 	}
 
-	VkFenceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	createInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	vkCreateFence(Device->getVkDevice(), &createInfo, nullptr, &Fence);
+	VkFenceCreateInfo create_info{};
+	create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	vkCreateFence(Device->getVkDevice(), &create_info, nullptr, &Fence);
 }
 
 VulkanFence::~VulkanFence()
@@ -26,10 +26,10 @@ VulkanFence::~VulkanFence()
 		return;
 	}
 
-	const VkDevice vkDevice = Device->getVkDevice();
-	if (vkDevice != VK_NULL_HANDLE && Fence != VK_NULL_HANDLE)
+	const VkDevice vk_device = Device->getVkDevice();
+	if (vk_device != VK_NULL_HANDLE && Fence != VK_NULL_HANDLE)
 	{
-		vkDestroyFence(vkDevice, Fence, nullptr);
+		vkDestroyFence(vk_device, Fence, nullptr);
 		Fence = VK_NULL_HANDLE;
 	}
 }

@@ -258,11 +258,11 @@ public:
 	void setName(const std::string& InName) 
 	{ 
 		Name = InName; 
-		SetDebugName(Name);
+		setDebugName(Name);
 	}
 	const std::string& getName() const { return Name; }
 protected:
-	virtual void SetDebugName(const std::string& InName) = 0;
+	virtual void setDebugName(const std::string& InName) = 0;
 	std::string Name;
 };
 

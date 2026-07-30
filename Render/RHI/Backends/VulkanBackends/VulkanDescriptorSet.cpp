@@ -49,12 +49,12 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VulkanDevice* InDevice, con
 		bindings.push_back(binding);
 	}
 
-	VkDescriptorSetLayoutCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	createInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-	createInfo.pBindings = bindings.data();
+	VkDescriptorSetLayoutCreateInfo create_info{};
+	create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	create_info.bindingCount = static_cast<uint32_t>(bindings.size());
+	create_info.pBindings = bindings.data();
 
-	vkCreateDescriptorSetLayout(Device->getVkDevice(), &createInfo, nullptr, &Layout);
+	vkCreateDescriptorSetLayout(Device->getVkDevice(), &create_info, nullptr, &Layout);
 }
 
 VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout()
@@ -71,7 +71,7 @@ bool VulkanDescriptorSetLayout::isValid() const
 	return Layout != VK_NULL_HANDLE;
 }
 
-void VulkanDescriptorSetLayout::SetDebugName(const std::string& Name)
+void VulkanDescriptorSetLayout::setDebugName(const std::string& Name)
 {
 	(void)Name;
 }
@@ -95,7 +95,7 @@ bool VulkanDescriptorSet::isValid() const
 	return layout && layout->isValid();
 }
 
-void VulkanDescriptorSet::SetDebugName(const std::string& Name)
+void VulkanDescriptorSet::setDebugName(const std::string& Name)
 {
 	(void)Name;
 }

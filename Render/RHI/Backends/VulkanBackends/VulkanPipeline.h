@@ -24,7 +24,7 @@ public:
 	VkPipelineBindPoint getBindPoint() const noexcept;
 
 private:
-	void SetDebugName(const std::string& Name) override;
+	void setDebugName(const std::string& Name) override;
 
 	VulkanDevice* Device = nullptr;
 	VkPipeline Pipeline = VK_NULL_HANDLE;

@@ -149,7 +149,7 @@ uint64_t VulkanBuffer::getSize() const
 	return BufferDesc.Size;
 }
 
-void VulkanBuffer::SetDebugName(const std::string& Name)
+void VulkanBuffer::setDebugName(const std::string& Name)
 {
 	(void)Name;
 }
@@ -349,7 +349,7 @@ VkImageAspectFlags VulkanTexture::getAspectMask() const noexcept
 	return VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
-void VulkanTexture::SetDebugName(const std::string& Name)
+void VulkanTexture::setDebugName(const std::string& Name)
 {
 	(void)Name;
 }
@@ -378,7 +378,7 @@ bool VulkanTextureView::isValid() const
 	return View != VK_NULL_HANDLE;
 }
 
-void VulkanTextureView::SetDebugName(const std::string& Name)
+void VulkanTextureView::setDebugName(const std::string& Name)
 {
 	(void)Name;
 }
@@ -426,7 +426,7 @@ bool VulkanSampler::isValid() const
 	return Sampler != VK_NULL_HANDLE;
 }
 
-void VulkanSampler::SetDebugName(const std::string& Name)
+void VulkanSampler::setDebugName(const std::string& Name)
 {
 	(void)Name;
 }

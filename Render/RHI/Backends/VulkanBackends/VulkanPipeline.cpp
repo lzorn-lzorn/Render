@@ -97,7 +97,7 @@ VkPipelineBindPoint VulkanPipeline::getBindPoint() const noexcept
 	return PipelineType == EPipelineType::Graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE;
 }
 
-void VulkanPipeline::SetDebugName(const std::string& Name)
+void VulkanPipeline::setDebugName(const std::string& Name)
 {
 	(void)Name;
 }

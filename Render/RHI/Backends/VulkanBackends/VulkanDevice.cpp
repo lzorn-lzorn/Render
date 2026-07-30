@@ -151,27 +151,27 @@ void VulkanDevice::submitCommandLists(ECommandQueueType Type, const QueueSubmitD
 		return;
 	}
 
-	std::vector<VkCommandBuffer> commandBuffers;
-	commandBuffers.reserve(Descriptor.CommandListCount);
+	std::vector<VkCommandBuffer> command_buffers;
+	command_buffers.reserve(Descriptor.CommandListCount);
 
 	for (uint32_t i = 0; i < Descriptor.CommandListCount; ++i)
 	{
-		auto* commandList = dynamic_cast<VulkanCommandList*>(Descriptor.CommandLists[i]);
-		if (commandList)
+		auto* command_list = static_cast<VulkanCommandList*>(Descriptor.CommandLists[i]);
+		if (command_list)
 		{
-			commandBuffers.push_back(commandList->getVkCommandBuffer());
+			command_buffers.push_back(command_list->getVkCommandBuffer());
 		}
 	}
 
-	if (commandBuffers.empty())
+	if (command_buffers.empty())
 	{
 		return;
 	}
 
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
-	submitInfo.pCommandBuffers = commandBuffers.data();
+	VkSubmitInfo submit_info{};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers.size());
+	submit_info.pCommandBuffers = command_buffers.data();
 
 	VkQueue queue = getVkQueue(Type);
 	if (queue == VK_NULL_HANDLE)
@@ -179,7 +179,7 @@ void VulkanDevice::submitCommandLists(ECommandQueueType Type, const QueueSubmitD
 		return;
 	}
 
-	vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
 	vkQueueWaitIdle(queue);
 
 	if (Descriptor.SignalFence)
@@ -278,13 +278,13 @@ VkSurfaceKHR VulkanDevice::createSurface(void* NativeWindowHandle) const
 
 bool VulkanDevice::createInstance()
 {
-	VkApplicationInfo appInfo{};
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = "RenderSandbox";
-	appInfo.applicationVersion = VK_MAKE_API_VERSION(0, 0, 1, 0);
-	appInfo.pEngineName = "Render";
-	appInfo.engineVersion = VK_MAKE_API_VERSION(0, 0, 1, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_3;
+	VkApplicationInfo app_info{};
+	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	app_info.pApplicationName = "RenderSandbox";
+	app_info.applicationVersion = VK_MAKE_API_VERSION(0, 0, 1, 0);
+	app_info.pEngineName = "Render";
+	app_info.engineVersion = VK_MAKE_API_VERSION(0, 0, 1, 0);
+	app_info.apiVersion = VK_API_VERSION_1_3;
 
 	std::vector<const char*> extensions;
 	extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -299,46 +299,46 @@ bool VulkanDevice::createInstance()
 		layers.push_back("VK_LAYER_KHRONOS_validation");
 	}
 
-	VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
-	debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	debugInfo.pfnUserCallback = DebugCallback;
+	VkDebugUtilsMessengerCreateInfoEXT debug_info{};
+	debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	debug_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	debug_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	debug_info.pfnUserCallback = DebugCallback;
 
-	VkInstanceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pApplicationInfo = &appInfo;
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	createInfo.ppEnabledExtensionNames = extensions.data();
-	createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
-	createInfo.ppEnabledLayerNames = layers.empty() ? nullptr : layers.data();
-	createInfo.pNext = EnableValidation ? &debugInfo : nullptr;
+	VkInstanceCreateInfo create_info{};
+	create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	create_info.pApplicationInfo = &app_info;
+	create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+	create_info.ppEnabledExtensionNames = extensions.data();
+	create_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
+	create_info.ppEnabledLayerNames = layers.empty() ? nullptr : layers.data();
+	create_info.pNext = EnableValidation ? &debug_info : nullptr;
 
-	VkResult createResult = vkCreateInstance(&createInfo, nullptr, &Instance);
-	if (createResult != VK_SUCCESS && EnableValidation)
+	VkResult create_result = vkCreateInstance(&create_info, nullptr, &Instance);
+	if (create_result != VK_SUCCESS && EnableValidation)
 	{
-		createInfo.enabledLayerCount = 0;
-		createInfo.ppEnabledLayerNames = nullptr;
-		createInfo.pNext = nullptr;
-		createResult = vkCreateInstance(&createInfo, nullptr, &Instance);
-		if (createResult == VK_SUCCESS)
+		create_info.enabledLayerCount = 0;
+		create_info.ppEnabledLayerNames = nullptr;
+		create_info.pNext = nullptr;
+		create_result = vkCreateInstance(&create_info, nullptr, &Instance);
+		if (create_result == VK_SUCCESS)
 		{
 			EnableValidation = false;
 		}
 	}
 
-	if (createResult != VK_SUCCESS)
+	if (create_result != VK_SUCCESS)
 	{
 		return false;
 	}
 
 	if (EnableValidation)
 	{
-		auto* createDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+		auto* create_debug_utils_messenger_EXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
 			vkGetInstanceProcAddr(Instance, "vkCreateDebugUtilsMessengerEXT"));
-		if (createDebugUtilsMessengerEXT)
+		if (create_debug_utils_messenger_EXT)
 		{
-			createDebugUtilsMessengerEXT(Instance, &debugInfo, nullptr, &DebugMessenger);
+			create_debug_utils_messenger_EXT(Instance, &debug_info, nullptr, &DebugMessenger);
 		}
 	}
 

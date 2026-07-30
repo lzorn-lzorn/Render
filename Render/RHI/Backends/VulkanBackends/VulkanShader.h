@@ -21,7 +21,7 @@ public:
 	const std::string& getEntryPoint() const noexcept { return EntryPoint; }
 
 private:
-	void SetDebugName(const std::string& Name) override;
+	void setDebugName(const std::string& Name) override;
 
 	VulkanDevice* Device = nullptr;
 	VkShaderModule ShaderModule = VK_NULL_HANDLE;

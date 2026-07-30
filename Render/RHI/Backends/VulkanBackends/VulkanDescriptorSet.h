@@ -17,7 +17,7 @@ public:
 	VkDescriptorSetLayout getVkDescriptorSetLayout() const noexcept { return Layout; }
 
 private:
-	void SetDebugName(const std::string& Name) override;
+	void setDebugName(const std::string& Name) override;
 	VulkanDevice* Device = nullptr;
 	RDescriptorSetLayoutDescriptor Descriptor{};
 	VkDescriptorSetLayout Layout = VK_NULL_HANDLE;
@@ -34,7 +34,7 @@ public:
 	VkDescriptorSet getVkDescriptorSet() const noexcept { return Set; }
 
 private:
-	void SetDebugName(const std::string& Name) override;
+	void setDebugName(const std::string& Name) override;
 	VulkanDevice* Device = nullptr;
 	RDescriptorSetDescriptor Descriptor{};
 	VkDescriptorSet Set = VK_NULL_HANDLE;

@@ -22,7 +22,7 @@ public:
 	VkBuffer getVkBuffer() const noexcept { return Buffer; }
 
 private:
-	void SetDebugName(const std::string& Name) override;
+	void setDebugName(const std::string& Name) override;
 
 	VulkanDevice* Device = nullptr;
 	RBufferDescriptor BufferDesc{};
@@ -53,7 +53,7 @@ public:
 	VulkanDevice* getDevice() const noexcept { return Device; }
 
 private:
-	void SetDebugName(const std::string& Name) override;
+	void setDebugName(const std::string& Name) override;
 
 	VulkanDevice* Device = nullptr;
 	RTextureDescriptor TextureDesc{};
@@ -77,7 +77,7 @@ public:
 	VkImageView getVkImageView() const noexcept { return View; }
 
 private:
-	void SetDebugName(const std::string& Name) override;
+	void setDebugName(const std::string& Name) override;
 
 	VulkanTexture* Texture = nullptr;
 	RTextureViewDescriptor Descriptor{};
@@ -95,7 +95,7 @@ public:
 	VkSampler getVkSampler() const noexcept { return Sampler; }
 
 private:
-	void SetDebugName(const std::string& Name) override;
+	void setDebugName(const std::string& Name) override;
 
 	VulkanDevice* Device = nullptr;
 	RSamplerDescriptor SamplerDesc{};

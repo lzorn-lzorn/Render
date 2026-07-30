@@ -52,7 +52,7 @@ bool VulkanShader::isValid() const
 	return ShaderModule != VK_NULL_HANDLE;
 }
 
-void VulkanShader::SetDebugName(const std::string& Name)
+void VulkanShader::setDebugName(const std::string& Name)
 {
 	(void)Name;
 }
