@@ -750,8 +750,8 @@ public:
 	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor) = 0;
 	virtual RSampler* createSampler(const RSamplerDescriptor& Descriptor) = 0;
 	virtual RShader* createShader(const RShaderDescriptor& Descriptor) = 0;
-	virtual RPipelineState* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) = 0;
-	virtual RPipelineState* createComputePipeline(const RComputePipelineDescriptor& Descriptor) = 0;
+	virtual RPipeline* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) = 0;
+	virtual RPipeline* createComputePipeline(const RComputePipelineDescriptor& Descriptor) = 0;
 	virtual RDescriptorSetLayout* createDescriptorSetLayout(const RDescriptorSetLayoutDescriptor& Descriptor) = 0;
 	virtual RDescriptorSet* createDescriptorSet(const RDescriptorSetDescriptor& Descriptor) = 0;
 	

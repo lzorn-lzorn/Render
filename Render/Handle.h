@@ -7,8 +7,8 @@ inline constexpr uint64_t InvalidHandleID = 0;
 inline std::atomic<uint64_t> GlobalHandleBExtID{ 1 };
 
 template <typename ObjectType>
-class Handle 
-{	
+class Handle
+{
 public:
     using IDType = uint64_t;
 

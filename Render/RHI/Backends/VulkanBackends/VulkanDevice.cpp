@@ -109,12 +109,12 @@ RShader* VulkanDevice::createShader(const RShaderDescriptor& Descriptor)
 	return new VulkanShader(this, Descriptor);
 }
 
-RPipelineState* VulkanDevice::createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor)
+RPipeline* VulkanDevice::createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor)
 {
 	return CreateVulkanGraphicsPipeline(this, Descriptor);
 }
 
-RPipelineState* VulkanDevice::createComputePipeline(const RComputePipelineDescriptor& Descriptor)
+RPipeline* VulkanDevice::createComputePipeline(const RComputePipelineDescriptor& Descriptor)
 {
 	return CreateVulkanComputePipeline(this, Descriptor);
 }
@@ -347,35 +347,35 @@ bool VulkanDevice::createInstance()
 
 bool VulkanDevice::pickPhysicalDevice()
 {
-	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(Instance, &deviceCount, nullptr);
-	if (deviceCount == 0)
+	uint32_t device_count = 0;
+	vkEnumeratePhysicalDevices(Instance, &device_count, nullptr);
+	if (device_count == 0)
 	{
 		return false;
 	}
 
-	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(Instance, &deviceCount, devices.data());
+	std::vector<VkPhysicalDevice> devices(device_count);
+	vkEnumeratePhysicalDevices(Instance, &device_count, devices.data());
 
 	for (VkPhysicalDevice device : devices)
 	{
-		uint32_t queueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-		if (queueFamilyCount == 0)
+		uint32_t queue_family_count = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+		if (queue_family_count == 0)
 		{
 			continue;
 		}
 
-		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+		std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
 
 		uint32_t graphics = UINT32_MAX;
 		uint32_t compute = UINT32_MAX;
 		uint32_t copy = UINT32_MAX;
 
-		for (uint32_t i = 0; i < queueFamilyCount; ++i)
+		for (uint32_t i = 0; i < queue_family_count; ++i)
 		{
-			const auto& props = queueFamilies[i];
+			const auto& props = queue_families[i];
 			if (graphics == UINT32_MAX && (props.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
 			{
 				graphics = i;
@@ -414,44 +414,44 @@ bool VulkanDevice::createLogicalDevice()
 		return false;
 	}
 
-	std::set<uint32_t> uniqueFamilies = {
-		GraphicsQueueFamilyIndex,
-		ComputeQueueFamilyIndex,
-		CopyQueueFamilyIndex
+	std::set<uint32_t> unique_families = {
+		GraphicsQueueFamilyIndex,  // 图形队列
+		ComputeQueueFamilyIndex,   // 计算队列
+		CopyQueueFamilyIndex       // 传输队列
 	};
 
 	const float queuePriority = 1.0f;
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	queueCreateInfos.reserve(uniqueFamilies.size());
+	std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+	queue_create_infos.reserve(unique_families.size());
 
-	for (uint32_t family : uniqueFamilies)
+	for (uint32_t family : unique_families)
 	{
-		VkDeviceQueueCreateInfo queueInfo{};
-		queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueInfo.queueFamilyIndex = family;
-		queueInfo.queueCount = 1;
-		queueInfo.pQueuePriorities = &queuePriority;
-		queueCreateInfos.push_back(queueInfo);
+		VkDeviceQueueCreateInfo queue_info{};
+		queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queue_info.queueFamilyIndex = family;
+		queue_info.queueCount = 1;
+		queue_info.pQueuePriorities = &queuePriority;
+		queue_create_infos.push_back(queue_info);
 	}
 
 	std::array<const char*, 1> extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-	VkPhysicalDeviceDynamicRenderingFeatures dynamicRendering{};
-	dynamicRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
-	dynamicRendering.dynamicRendering = VK_TRUE;
+	VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering{};
+	dynamic_rendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+	dynamic_rendering.dynamicRendering = VK_TRUE;
 
-	VkPhysicalDeviceFeatures deviceFeatures{};
+	VkPhysicalDeviceFeatures device_features{};
 
-	VkDeviceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pNext = &dynamicRendering;
-	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-	createInfo.pEnabledFeatures = &deviceFeatures;
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	createInfo.ppEnabledExtensionNames = extensions.data();
+	VkDeviceCreateInfo create_info{};
+	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	create_info.pNext = &dynamic_rendering;
+	create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
+	create_info.pQueueCreateInfos = queue_create_infos.data();
+	create_info.pEnabledFeatures = &device_features;
+	create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+	create_info.ppEnabledExtensionNames = extensions.data();
 
-	if (vkCreateDevice(PhysicalDevice, &createInfo, nullptr, &Device) != VK_SUCCESS)
+	if (vkCreateDevice(PhysicalDevice, &create_info, nullptr, &Device) != VK_SUCCESS)
 	{
 		return false;
 	}
@@ -470,11 +470,11 @@ void VulkanDevice::destroyDebugMessenger()
 		return;
 	}
 
-	auto* destroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+	auto* destroy_debug_utils_messenger_EXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
 		vkGetInstanceProcAddr(Instance, "vkDestroyDebugUtilsMessengerEXT"));
-	if (destroyDebugUtilsMessengerEXT)
+	if (destroy_debug_utils_messenger_EXT)
 	{
-		destroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
+		destroy_debug_utils_messenger_EXT(Instance, DebugMessenger, nullptr);
 	}
 
 	DebugMessenger = VK_NULL_HANDLE;
