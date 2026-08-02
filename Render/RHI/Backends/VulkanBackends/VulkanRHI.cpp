@@ -11,17 +11,17 @@ namespace
 {
 
 template <typename EnumT>
-bool HasFlag(EnumT value, EnumT flag)
+bool HasFlag(EnumT Value, EnumT Flag)
 {
 	using UIntT = std::underlying_type_t<EnumT>;
-	return (static_cast<UIntT>(value) & static_cast<UIntT>(flag)) != 0;
+	return (static_cast<UIntT>(Value) & static_cast<UIntT>(Flag)) != 0;
 }
 
 } // namespace
 
-VkFormat ToVkFormat(EFormat format)
+VkFormat ToVkFormat(EFormat Fomat)
 {
-	switch (format)
+	switch (Fomat)
 	{
 	case EFormat::RGBA8_UNorm: return VK_FORMAT_R8G8B8A8_UNORM;
 	case EFormat::RGBA8_sRGB: return VK_FORMAT_R8G8B8A8_SRGB;
@@ -36,9 +36,9 @@ VkFormat ToVkFormat(EFormat format)
 	}
 }
 
-VkIndexType ToVkIndexType(EIndexFormat format)
+VkIndexType ToVkIndexType(EIndexFormat Fomat)
 {
-	switch (format)
+	switch (Fomat)
 	{
 	case EIndexFormat::UInt16: return VK_INDEX_TYPE_UINT16;
 	case EIndexFormat::UInt32: return VK_INDEX_TYPE_UINT32;
@@ -52,50 +52,50 @@ VkIndexType ToVkIndexType(EIndexFormat format)
 	}
 }
 
-VkShaderStageFlags ToVkShaderStageFlags(EShaderStage stage)
+VkShaderStageFlags ToVkShaderStageFlags(EShaderStage Stage)
 {
 	VkShaderStageFlags result = 0;
-	if (HasFlag(stage, EShaderStage::Vertex)) result |= VK_SHADER_STAGE_VERTEX_BIT;
-	if (HasFlag(stage, EShaderStage::Pixel)) result |= VK_SHADER_STAGE_FRAGMENT_BIT;
-	if (HasFlag(stage, EShaderStage::Compute)) result |= VK_SHADER_STAGE_COMPUTE_BIT;
-	if (HasFlag(stage, EShaderStage::Geometry)) result |= VK_SHADER_STAGE_GEOMETRY_BIT;
+	if (HasFlag(Stage, EShaderStage::Vertex)) result |= VK_SHADER_STAGE_VERTEX_BIT;
+	if (HasFlag(Stage, EShaderStage::Pixel)) result |= VK_SHADER_STAGE_FRAGMENT_BIT;
+	if (HasFlag(Stage, EShaderStage::Compute)) result |= VK_SHADER_STAGE_COMPUTE_BIT;
+	if (HasFlag(Stage, EShaderStage::Geometry)) result |= VK_SHADER_STAGE_GEOMETRY_BIT;
 	#ifdef VK_SHADER_STAGE_MESH_BIT_EXT
-	if (HasFlag(stage, EShaderStage::Mesh)) result |= VK_SHADER_STAGE_MESH_BIT_EXT;
+	if (HasFlag(Stage, EShaderStage::Mesh)) result |= VK_SHADER_STAGE_MESH_BIT_EXT;
 	#endif
 	#ifdef VK_SHADER_STAGE_TASK_BIT_EXT
-	if (HasFlag(stage, EShaderStage::Amplification)) result |= VK_SHADER_STAGE_TASK_BIT_EXT;
+	if (HasFlag(Stage, EShaderStage::Amplification)) result |= VK_SHADER_STAGE_TASK_BIT_EXT;
 	#endif
 	return result;
 }
 
-VkBufferUsageFlags ToVkBufferUsage(EBufferUsage usage)
+VkBufferUsageFlags ToVkBufferUsage(EBufferUsage Usage)
 {
 	VkBufferUsageFlags flags = 0;
-	if (HasFlag(usage, EBufferUsage::Vertex)) flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	if (HasFlag(usage, EBufferUsage::Index)) flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-	if (HasFlag(usage, EBufferUsage::Uniform)) flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-	if (HasFlag(usage, EBufferUsage::Storage)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-	if (HasFlag(usage, EBufferUsage::Indirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-	if (HasFlag(usage, EBufferUsage::TransferSrc)) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-	if (HasFlag(usage, EBufferUsage::TransferDst)) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	if (HasFlag(Usage, EBufferUsage::Vertex)) flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	if (HasFlag(Usage, EBufferUsage::Index)) flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+	if (HasFlag(Usage, EBufferUsage::Uniform)) flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	if (HasFlag(Usage, EBufferUsage::Storage)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	if (HasFlag(Usage, EBufferUsage::Indirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+	if (HasFlag(Usage, EBufferUsage::TransferSrc)) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	if (HasFlag(Usage, EBufferUsage::TransferDst)) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	return flags;
 }
 
-VkImageUsageFlags ToVkImageUsage(ETextureUsage usage)
+VkImageUsageFlags ToVkImageUsage(ETextureUsage Usage)
 {
 	VkImageUsageFlags flags = 0;
-	if (HasFlag(usage, ETextureUsage::Sampled)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
-	if (HasFlag(usage, ETextureUsage::Storage)) flags |= VK_IMAGE_USAGE_STORAGE_BIT;
-	if (HasFlag(usage, ETextureUsage::Target)) flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	if (HasFlag(usage, ETextureUsage::DepthStencil)) flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-	if (HasFlag(usage, ETextureUsage::TransferSrc)) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-	if (HasFlag(usage, ETextureUsage::TransferDst)) flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	if (HasFlag(Usage, ETextureUsage::Sampled)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+	if (HasFlag(Usage, ETextureUsage::Storage)) flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+	if (HasFlag(Usage, ETextureUsage::Target)) flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	if (HasFlag(Usage, ETextureUsage::DepthStencil)) flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	if (HasFlag(Usage, ETextureUsage::TransferSrc)) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	if (HasFlag(Usage, ETextureUsage::TransferDst)) flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	return flags;
 }
 
-VkPrimitiveTopology ToVkPrimitiveTopology(EPrimitiveTopology topology)
+VkPrimitiveTopology ToVkPrimitiveTopology(EPrimitiveTopology Topology)
 {
-	switch (topology)
+	switch (Topology)
 	{
 	case EPrimitiveTopology::PointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 	case EPrimitiveTopology::LineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
@@ -107,14 +107,14 @@ VkPrimitiveTopology ToVkPrimitiveTopology(EPrimitiveTopology topology)
 	}
 }
 
-VkPolygonMode ToVkPolygonMode(EFillMode mode)
+VkPolygonMode ToVkPolygonMode(EFillMode Mode)
 {
-	return mode == EFillMode::Wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+	return Mode == EFillMode::Wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 }
 
-VkCullModeFlags ToVkCullMode(ECullMode mode)
+VkCullModeFlags ToVkCullMode(ECullMode Mode)
 {
-	switch (mode)
+	switch (Mode)
 	{
 	case ECullMode::Front: return VK_CULL_MODE_FRONT_BIT;
 	case ECullMode::Back: return VK_CULL_MODE_BACK_BIT;
@@ -124,9 +124,9 @@ VkCullModeFlags ToVkCullMode(ECullMode mode)
 	}
 }
 
-VkCompareOp ToVkCompareOp(ECompareOp op)
+VkCompareOp ToVkCompareOp(ECompareOp Op)
 {
-	switch (op)
+	switch (Op)
 	{
 	case ECompareOp::Less: return VK_COMPARE_OP_LESS;
 	case ECompareOp::LessEqual: return VK_COMPARE_OP_LESS_OR_EQUAL;
@@ -141,9 +141,9 @@ VkCompareOp ToVkCompareOp(ECompareOp op)
 	}
 }
 
-VkStencilOp ToVkStencilOp(EStencilOp op)
+VkStencilOp ToVkStencilOp(EStencilOp Op)
 {
-	switch (op)
+	switch (Op)
 	{
 	case EStencilOp::Keep: return VK_STENCIL_OP_KEEP;
 	case EStencilOp::Zero: return VK_STENCIL_OP_ZERO;
@@ -187,9 +187,9 @@ VkBlendFactor ToVkBlendFactor(EBlendFactor factor)
 	}
 }
 
-VkBlendOp ToVkBlendOp(EBlendOp op)
+VkBlendOp ToVkBlendOp(EBlendOp Op)
 {
-	switch (op)
+	switch (Op)
 	{
 	case EBlendOp::Subtract: return VK_BLEND_OP_SUBTRACT;
 	case EBlendOp::ReverseSubtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
@@ -201,9 +201,9 @@ VkBlendOp ToVkBlendOp(EBlendOp op)
 	}
 }
 
-VkImageLayout ToVkImageLayout(EResourceState state)
+VkImageLayout ToVkImageLayout(EResourceState State)
 {
-	switch (state)
+	switch (State)
 	{
 	case EResourceState::Target: return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	case EResourceState::DepthWrite: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -219,9 +219,9 @@ VkImageLayout ToVkImageLayout(EResourceState state)
 	}
 }
 
-VkPipelineStageFlags ToVkPipelineStage(EResourceState state)
+VkPipelineStageFlags ToVkPipelineStage(EResourceState State)
 {
-	switch (state)
+	switch (State)
 	{
 	case EResourceState::VertexBuffer:
 	case EResourceState::IndexBuffer:
@@ -248,9 +248,9 @@ VkPipelineStageFlags ToVkPipelineStage(EResourceState state)
 	}
 }
 
-VkAccessFlags ToVkAccessMask(EResourceState state)
+VkAccessFlags ToVkAccessMask(EResourceState State)
 {
-	switch (state)
+	switch (State)
 	{
 	case EResourceState::VertexBuffer: return VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 	case EResourceState::IndexBuffer: return VK_ACCESS_INDEX_READ_BIT;
@@ -270,11 +270,10 @@ VkAccessFlags ToVkAccessMask(EResourceState state)
 	}
 }
 
-bool IsDepthFormat(EFormat format)
+VkSharingMode ToVkSharingMode(ESharingMode Mode)
 {
-	return format == EFormat::D24_UNorm_S8_UInt || format == EFormat::D32_Float;
+	return (Mode == ESharingMode::Exclusive) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 }
-
 
 std::unique_ptr<RDevice> CreateVulkanDevice()
 {

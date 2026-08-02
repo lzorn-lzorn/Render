@@ -7,22 +7,23 @@
 namespace render::rhi
 {
 
-VkFormat ToVkFormat(EFormat format);
-VkIndexType ToVkIndexType(EIndexFormat format);
-VkShaderStageFlags ToVkShaderStageFlags(EShaderStage stage);
-VkBufferUsageFlags ToVkBufferUsage(EBufferUsage usage);
-VkImageUsageFlags ToVkImageUsage(ETextureUsage usage);
-VkPrimitiveTopology ToVkPrimitiveTopology(EPrimitiveTopology topology);
-VkPolygonMode ToVkPolygonMode(EFillMode mode);
-VkCullModeFlags ToVkCullMode(ECullMode mode);
-VkCompareOp ToVkCompareOp(ECompareOp op);
-VkStencilOp ToVkStencilOp(EStencilOp op);
-VkSampleCountFlagBits ToVkSampleCount(ESampleCount count);
-VkBlendFactor ToVkBlendFactor(EBlendFactor factor);
-VkBlendOp ToVkBlendOp(EBlendOp op);
-VkImageLayout ToVkImageLayout(EResourceState state);
-VkPipelineStageFlags ToVkPipelineStage(EResourceState state);
-VkAccessFlags ToVkAccessMask(EResourceState state);
-bool IsDepthFormat(EFormat format);
+VkFormat ToVkFormat(EFormat);
+VkIndexType ToVkIndexType(EIndexFormat);
+VkShaderStageFlags ToVkShaderStageFlags(EShaderStage);
+VkBufferUsageFlags ToVkBufferUsage(EBufferUsage);
+VkImageUsageFlags ToVkImageUsage(ETextureUsage);
+VkPrimitiveTopology ToVkPrimitiveTopology(EPrimitiveTopology);
+VkPolygonMode ToVkPolygonMode(EFillMode);
+VkCullModeFlags ToVkCullMode(ECullMode);
+VkCompareOp ToVkCompareOp(ECompareOp);
+VkStencilOp ToVkStencilOp(EStencilOp);
+VkSampleCountFlagBits ToVkSampleCount(ESampleCount);
+VkBlendFactor ToVkBlendFactor(EBlendFactor);
+VkBlendOp ToVkBlendOp(EBlendOp);
+VkImageLayout ToVkImageLayout(EResourceState);
+VkPipelineStageFlags ToVkPipelineStage(EResourceState);
+VkAccessFlags ToVkAccessMask(EResourceState);
+VkSharingMode ToVkSharingMode(ESharingMode);
+bool IsDepthFormat(EFormat);
 
 } // namespace render::rhi

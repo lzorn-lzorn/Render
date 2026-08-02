@@ -1,5 +1,4 @@
 #include "VulkanDevice.h"
-
 #include "VulkanCommandList.h"
 #include "VulkanDescriptorSet.h"
 #include "VulkanFence.h"

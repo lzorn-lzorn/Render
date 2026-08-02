@@ -32,6 +32,8 @@ public:
 
 	RBuffer* createBuffer(const RBufferDescriptor& Descriptor) override;
 	RTexture* createTexture(const RTextureDescriptor& Descriptor) override;
+	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor, RTextureBulkData data) override;
+
 	RSampler* createSampler(const RSamplerDescriptor& Descriptor) override;
 	RShader* createShader(const RShaderDescriptor& Descriptor) override;
 	RPipeline* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) override;
@@ -56,6 +58,10 @@ public:
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 	VkSurfaceKHR createSurface(void* NativeWindowHandle) const;
 
+public:
+	void createStagingBuffer(VkBuffer& OutBuffer, VkDeviceMemory& OutMemory, VkDeviceSize Size);
+	VkCommandBuffer beginImmediateCommand();
+	void endImmediateCommand(VkCommandBuffer CommandBuffer);
 private:
 	bool createInstance();
 	bool pickPhysicalDevice();

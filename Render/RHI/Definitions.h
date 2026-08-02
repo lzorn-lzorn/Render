@@ -9,6 +9,7 @@
 #include <span>
 #include <cstddef>
 #include <type_traits>
+#include <concepts>
 namespace render::rhi
 {
 
@@ -56,10 +57,58 @@ enum class EFormat : uint32_t
 	BGRA8_UNorm,
 	RGBA16_Float,
 	RGBA32_Float,
+	D16_UNorm,
 	D24_UNorm_S8_UInt,
 	D32_Float,
 	// ...
 };
+
+inline bool IsDepthFormat(EFormat Format)
+{
+	return Format == EFormat::D24_UNorm_S8_UInt || Format == EFormat::D32_Float;
+}
+
+inline bool IsDepthOnlyFormat(EFormat Format)
+{
+	switch (Format) {
+        case EFormat::D16_UNorm:
+        case EFormat::D32_Float:
+            return true;
+        default:
+            return false;
+    }
+}
+
+inline bool IsStencilOnlyFormat(EFormat Format)
+{
+	return Format == EFormat::D24_UNorm_S8_UInt;
+}
+
+inline bool IsDepthStencilFormat(EFormat Format)
+{
+	return Format == EFormat::D24_UNorm_S8_UInt || Format == EFormat::D32_Float;
+}
+
+inline uint32_t CalPixelSizeFormEFormat(EFormat Format)
+{
+	switch (Format)
+	{
+	case EFormat::RGBA8_UNorm:
+	case EFormat::RGBA8_sRGB:
+	case EFormat::BGRA8_UNorm:
+		return 4;
+	case EFormat::RGBA16_Float:
+		return 8;
+	case EFormat::RGBA32_Float:
+		return 16;
+	case EFormat::D24_UNorm_S8_UInt:
+		return 4;
+	case EFormat::D32_Float:
+		return 4;
+	default:
+		return 0;
+	}
+}
 
 enum class EBufferUsage : uint32_t
 {
@@ -104,6 +153,23 @@ inline ETextureUsage operator&(ETextureUsage a, ETextureUsage b)
 {
 	return static_cast<ETextureUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 }
+
+enum class ETextureDimension : uint8_t
+{
+    Texture1D,          // 1D 纹理
+    Texture1DArray,     // 1D 纹理数组
+    Texture2D,          // 2D 纹理
+    Texture2DArray,     // 2D 纹理数组
+    Texture3D,          // 3D 纹理(整个 Depth 当作第三维，不能单独切片)
+    Cube,               // 立方体贴图(6 个面，不可独立扩展)
+    CubeArray           // 立方体贴图数组(6 的整数倍面)
+};
+
+enum class ESharingMode
+{
+	Exclusive,   // GPU 独占模式, 性能更高
+	Concurrent   // GPU 并发模式, 允许多个队列同时访问资源, 但性能较低
+};
 
 enum class EShaderStage : uint32_t
 {
@@ -245,6 +311,11 @@ enum class ESampleCount
 	Count64 = 64
 };
 
+// 向上取整到指定对齐值的整数倍
+template <std::integral Ty>
+inline Ty Align(Ty Value, Ty Alignment) {
+    return (Value + Alignment - 1) / Alignment * Alignment;
+}
 
 /**
  * @brief RResource 内封装的是一个 GPU 资源的句柄对象.
@@ -294,8 +365,79 @@ struct RTextureDescriptor
 	uint32_t MipLevels = 1;
 	uint32_t ArrayLayers = 1;
 	ESampleCount SampleCount = ESampleCount::Count1;
+	ESharingMode SharingMode = ESharingMode::Exclusive;
+	bool ShouldGenerateMipmaps = false;
 	std::string Name;
 };
+
+struct RTextureBulkData
+{
+	const void *Data = nullptr;
+	uint32_t RowPitch = 0; // 每行数据的字节数
+	uint32_t SlicePitch = 0; // 每一层(深度)的字节数
+	bool hasData() const noexcept { return Data != nullptr && RowPitch > 0 && SlicePitch > 0; }
+	
+};
+
+struct TextureHelper
+{
+	struct SubresourceInfo {
+		const void* Data;
+		uint32_t RowPitch;
+		uint32_t SlicePitch;
+	};
+
+	// 根据指定的 Mip 级别和数组层索引从一整块连续的初始纹理数据中,切分出对应的子资源数
+    // 据块,并提供其数据指针,行跨距和层跨距
+	static SubresourceInfo getSubresourceData(const RTextureDescriptor& Desc, const RTextureBulkData* BulkDataPtr, uint32_t MipLevel, uint32_t ArrayLayer)
+	{
+		if (!BulkDataPtr || MipLevel >= Desc.MipLevels || ArrayLayer >= Desc.ArrayLayers)
+        {
+			return { nullptr, 0, 0 };
+		}
+
+		uint32_t pixel_size = CalPixelSizeFormEFormat(Desc.Format);
+		const uint8_t* base_ptr = static_cast<const uint8_t*>(BulkDataPtr->Data);
+		uint32_t current_offset = 0;
+
+		// 标准内存布局：mip 优先,同一 mip 内所有 array layer 连续,各层内部按 2D 行/层排列
+		for (uint32_t m = 0; m < Desc.MipLevels; ++m) {
+			uint32_t mip_width = std::max(1u, Desc.Width  >> m);
+			uint32_t mip_height = std::max(1u, Desc.Height >> m);
+			uint32_t mip_depth = (Desc.Depth > 0) ? std::max(1u, Desc.Depth >> m) : 1;
+
+			// 计算该 mip 的子资源跨距(需考虑设备对齐要求,这里用 256 字节对齐为例)
+			uint32_t row_pitch = Align(mip_width * pixel_size, 256u);
+			uint32_t slice_pitch = row_pitch * mip_height; // 适用于 2D 和 3D(3D 的每一层即一张 2D 切片)
+
+			if (m == MipLevel) {
+				// 定位到目标 layer
+				current_offset += ArrayLayer * slice_pitch * mip_depth;
+				return {
+					base_ptr + current_offset,
+					row_pitch,
+					slice_pitch
+				};
+			} else {
+				// 跳过整个 mip 的所有 layer
+				current_offset += Desc.ArrayLayers * slice_pitch * mip_depth;
+			}
+		}
+		return { nullptr, 0, 0 };
+	}
+};
+
+
+
+// 纹理更新区域描述
+struct RTextureUpdateRegion
+{
+	uint32_t MipIndex; // 要更新的 mip 级别(0 为最高分辨率)
+	uint32_t ArrayLayer; // 纹理数组 / Cube 的面索引(2D 纹理固定为 0)
+	uint32_t DstX, DstY, DstZ; // 目标纹理的起始位置
+	uint32_t Width, Height, Depth; // 更新区域的尺寸
+};
+
 
 struct RSamplerDescriptor
 {
@@ -477,10 +619,11 @@ struct RTextureViewDescriptor
 	};
 	EViewType Type = EViewType::SRV;
 	EFormat Format = EFormat::Undefined;
-	uint32_t BaseMipLevel = 0;
+	uint32_t MipLevel = 0;
 	uint32_t MipLevelCount = 1;
-	uint32_t BaseArrayLayer = 0;
+	uint32_t ArrayLayer = 0;
 	uint32_t ArrayLayerCount = 1;
+	ETextureDimension Dimension = ETextureDimension::Texture2D;
 };
 
 struct RClearValue
@@ -627,6 +770,25 @@ class RTexture : public RResource
 public:
 	virtual EResourceType getType() const override { return EResourceType::Texture; }
 	virtual class RTextureView* createView(const RTextureViewDescriptor& Descriptor) = 0;
+
+	/**
+	 * @brief 更新纹理数据
+	 * @param Region 更新区域描述
+	 * @param SrcData CPU端源数据指针, 数据格式应与纹理格式
+	 * 	指向连续排列的像素数据, 按行,层顺序存储, 中间没有额外填充, 数据类型格式必须与纹
+	 *	理创建时指定的 EFormat 匹配
+	 * @param SrcRowPitch 源数据每行的字节数, 如果为 0 则按纹理格式计算
+	 * 	一行像素占用的字节数, 可能大于 SrcWidth * 每像素字节数
+	 * @param SrcDepthPitch 源数据每层(深度)的字节数, 如果为 0 则按纹理格式计算
+	 * 	仅用于 3D 纹理或纹理数组一次更新多个深度和层, 其表示从一层(slice)的起始位置到下
+	 *  一层的起始位置的字节数. 对于 2D 纹理或一次只更新一层, 此值为 0
+	 */
+	virtual void updateTexture(const RTextureUpdateRegion& Region, const void* SrcData, uint32_t SrcRowPitch, uint32_t SrcDepthPitch = 0) = 0;
+
+	/**
+	 * @brief GPU自动生成纹理的mipmap
+	 */
+	virtual void generateMipmaps() = 0;
 	virtual uint32_t getWidth() const = 0;
 	virtual uint32_t getHeight() const = 0;
 	virtual uint32_t getDepth() const = 0;
@@ -748,6 +910,8 @@ public:
 	// 资源创建
 	virtual RBuffer* createBuffer(const RBufferDescriptor& Descriptor) = 0;
 	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor) = 0;
+	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor, RTextureBulkData data) = 0;
+
 	virtual RSampler* createSampler(const RSamplerDescriptor& Descriptor) = 0;
 	virtual RShader* createShader(const RShaderDescriptor& Descriptor) = 0;
 	virtual RPipeline* createGraphicsPipeline(const RGraphicsPipelineDescriptor& Descriptor) = 0;
