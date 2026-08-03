@@ -25,13 +25,13 @@ inline VkImageAspectFlags toVkImageAspectMask(ETextureAspect Aspect, EFormat Tex
 		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 	case ETextureAspect::Auto:
 	default:
-		if (IsDepthStencilFormat(TextureFormat))
+		if (isDepthStencilFormat(TextureFormat))
 		{
-			if (IsDepthOnlyFormat(TextureFormat))
+			if (isDepthOnlyFormat(TextureFormat))
 			{
 				return VK_IMAGE_ASPECT_DEPTH_BIT;
 			}
-			if (IsStencilOnlyFormat(TextureFormat))
+			if (isStencilOnlyFormat(TextureFormat))
 			{
 				return VK_IMAGE_ASPECT_STENCIL_BIT;
 			}
@@ -51,15 +51,15 @@ inline VkImageAspectFlags toVkImageAspectMask(const RTextureViewDescriptor& View
 	switch (ViewDescriptor.Type)
 	{
 	case RTextureViewDescriptor::EViewType::DSV:
-		if (IsDepthOnlyFormat(TextureFormat))
+		if (isDepthOnlyFormat(TextureFormat))
 		{
 			return VK_IMAGE_ASPECT_DEPTH_BIT;
 		}
-		if (IsStencilOnlyFormat(TextureFormat))
+		if (isStencilOnlyFormat(TextureFormat))
 		{
 			return VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
-		if (IsDepthStencilFormat(TextureFormat))
+		if (isDepthStencilFormat(TextureFormat))
 		{
 			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 		}

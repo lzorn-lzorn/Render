@@ -212,7 +212,7 @@ bool VulkanSwapchain::createSwapchain(VkSwapchainKHR OldSwapchain)
 	vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, Surface, &formatCount, formats.data());
 
 	VkSurfaceFormatKHR selectedFormat = formats[0];
-	VkFormat requested = ToVkFormat(Desc.Format);
+	VkFormat requested = toVkFormat(Desc.Format);
 	for (const VkSurfaceFormatKHR& format : formats)
 	{
 		if (format.format == requested)

@@ -75,7 +75,7 @@ VkImageLayout getPreferredImageLayout(const RTextureDescriptor& TextureDesc)
 	{
 		return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	}
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::DepthStencil) || IsDepthFormat(TextureDesc.Format))
+	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::DepthStencil) || isDepthFormat(TextureDesc.Format))
 	{
 		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	}
@@ -145,7 +145,7 @@ VkAccessFlags getAccessMaskForLayout(VkImageLayout Layout)
 
 RTextureViewDescriptor::EViewType getDefaultViewType(const RTextureDescriptor& TextureDesc)
 {
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::DepthStencil) || IsDepthFormat(TextureDesc.Format))
+	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::DepthStencil) || isDepthFormat(TextureDesc.Format))
 	{
 		return RTextureViewDescriptor::EViewType::DSV;
 	}
@@ -271,7 +271,7 @@ void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void
 		return;
 	}
 
-	const uint32_t pixel_size = CalPixelSizeFormEFormat(TextureDesc.Format);
+	const uint32_t pixel_size = calPixelSizeFormEFormat(TextureDesc.Format);
 	if (pixel_size == 0)
 	{
 		return;
@@ -385,13 +385,13 @@ void VulkanTexture::generateMipmaps()
 		return;
 	}
 
-	if (IsDepthStencilFormat(TextureDesc.Format))
+	if (isDepthStencilFormat(TextureDesc.Format))
 	{
 		return;
 	}
 
 	VkFormatProperties format_properties{};
-	vkGetPhysicalDeviceFormatProperties(Device->getVkPhysicalDevice(), ToVkFormat(TextureDesc.Format), &format_properties);
+	vkGetPhysicalDeviceFormatProperties(Device->getVkPhysicalDevice(), toVkFormat(TextureDesc.Format), &format_properties);
 	if ((format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) == 0)
 	{
 		return;
@@ -618,7 +618,7 @@ RTextureView* VulkanTexture::createView(const RTextureViewDescriptor& Descriptor
 	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	view_info.image = ImageResource.Image;
 	view_info.viewType = toVkImageViewType(resolved_descriptor.Dimension);
-	view_info.format = ToVkFormat(resolved_descriptor.Format);
+	view_info.format = toVkFormat(resolved_descriptor.Format);
 	view_info.subresourceRange.aspectMask = toVkImageAspectMask(resolved_descriptor, resolved_descriptor.Format);
 	view_info.subresourceRange.baseMipLevel = resolved_descriptor.MipLevel;
 	view_info.subresourceRange.levelCount = resolved_descriptor.MipLevelCount;
@@ -704,12 +704,12 @@ bool VulkanTexture::initializeImage()
 
 	if (TextureDesc.Usage == ETextureUsage::None)
 	{
-		TextureDesc.Usage = IsDepthFormat(TextureDesc.Format)
+		TextureDesc.Usage = isDepthFormat(TextureDesc.Format)
 			? ETextureUsage::DepthStencil
 			: ETextureUsage::Sampled;
 	}
 
-	VkImageUsageFlags usage_flags = ToVkImageUsage(TextureDesc.Usage);
+	VkImageUsageFlags usage_flags = toVkImageUsage(TextureDesc.Usage);
 	usage_flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	if (TextureDesc.MipLevels > 1 || TextureDesc.ShouldGenerateMipmaps || hasAnyFlags(TextureDesc.Usage, ETextureUsage::TransferSrc))
 	{
@@ -724,18 +724,18 @@ bool VulkanTexture::initializeImage()
 	{
 		image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
-	image_info.format = ToVkFormat(TextureDesc.Format);
+	image_info.format = toVkFormat(TextureDesc.Format);
 	image_info.extent = { TextureDesc.Width, TextureDesc.Height, TextureDesc.Depth };
 	image_info.mipLevels = TextureDesc.MipLevels;
 	image_info.arrayLayers = TextureDesc.ArrayLayers;
-	image_info.samples = ToVkSampleCount(TextureDesc.SampleCount);
+	image_info.samples = toVkSampleCount(TextureDesc.SampleCount);
 	if (TextureDesc.Dimension == ETextureDimension::Texture3D)
 	{
 		image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	}
 	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	image_info.usage = usage_flags;
-	image_info.sharingMode = ToVkSharingMode(TextureDesc.SharingMode);
+	image_info.sharingMode = toVkSharingMode(TextureDesc.SharingMode);
 	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	if (vkCreateImage(Device->getVkDevice(), &image_info, nullptr, &ImageResource.Image) != VK_SUCCESS)
@@ -799,7 +799,7 @@ bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
 		return false;
 	}
 
-	const uint32_t pixel_size = CalPixelSizeFormEFormat(TextureDesc.Format);
+	const uint32_t pixel_size = calPixelSizeFormEFormat(TextureDesc.Format);
 	if (pixel_size == 0)
 	{
 		return false;

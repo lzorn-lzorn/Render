@@ -161,7 +161,7 @@ VulkanPipeline* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphi
 		VkVertexInputAttributeDescription vkAttribute{};
 		vkAttribute.location = attribute.Location;
 		vkAttribute.binding = attribute.Binding;
-		vkAttribute.format = ToVkFormat(attribute.Format);
+		vkAttribute.format = toVkFormat(attribute.Format);
 		vkAttribute.offset = attribute.Offset;
 		attributeDescriptions.push_back(vkAttribute);
 	}
@@ -175,7 +175,7 @@ VulkanPipeline* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphi
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = ToVkPrimitiveTopology(Descriptor.PrimitiveTopology);
+	inputAssembly.topology = toVkPrimitiveTopology(Descriptor.PrimitiveTopology);
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
 	VkPipelineViewportStateCreateInfo viewportState{};
@@ -187,8 +187,8 @@ VulkanPipeline* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphi
 	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	rasterizer.depthClampEnable = Descriptor.RasterizerState.DepthClipEnable ? VK_FALSE : VK_TRUE;
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
-	rasterizer.polygonMode = ToVkPolygonMode(Descriptor.RasterizerState.FillMode);
-	rasterizer.cullMode = ToVkCullMode(Descriptor.RasterizerState.CullMode);
+	rasterizer.polygonMode = toVkPolygonMode(Descriptor.RasterizerState.FillMode);
+	rasterizer.cullMode = toVkCullMode(Descriptor.RasterizerState.CullMode);
 	rasterizer.frontFace = Descriptor.RasterizerState.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
 	rasterizer.depthBiasEnable = Descriptor.RasterizerState.DepthBias != 0 ? VK_TRUE : VK_FALSE;
 	rasterizer.depthBiasConstantFactor = static_cast<float>(Descriptor.RasterizerState.DepthBias);
@@ -205,7 +205,7 @@ VulkanPipeline* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphi
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencil.depthTestEnable = Descriptor.DepthStencilState.DepthTestEnable ? VK_TRUE : VK_FALSE;
 	depthStencil.depthWriteEnable = Descriptor.DepthStencilState.DepthWriteEnable ? VK_TRUE : VK_FALSE;
-	depthStencil.depthCompareOp = ToVkCompareOp(Descriptor.DepthStencilState.DepthFunc);
+	depthStencil.depthCompareOp = toVkCompareOp(Descriptor.DepthStencilState.DepthFunc);
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
 	depthStencil.stencilTestEnable = Descriptor.DepthStencilState.StencilTestEnable ? VK_TRUE : VK_FALSE;
 
@@ -221,12 +221,12 @@ VulkanPipeline* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphi
 		{
 			const RBlendAttachment& attachment = Descriptor.BlendState.Attachments[i];
 			blend.blendEnable = attachment.BlendEnable ? VK_TRUE : VK_FALSE;
-			blend.srcColorBlendFactor = ToVkBlendFactor(attachment.SrcColorBlendFactor);
-			blend.dstColorBlendFactor = ToVkBlendFactor(attachment.DstColorBlendFactor);
-			blend.colorBlendOp = ToVkBlendOp(attachment.ColorBlendOp);
-			blend.srcAlphaBlendFactor = ToVkBlendFactor(attachment.SrcAlphaBlendFactor);
-			blend.dstAlphaBlendFactor = ToVkBlendFactor(attachment.DstAlphaBlendFactor);
-			blend.alphaBlendOp = ToVkBlendOp(attachment.AlphaBlendOp);
+			blend.srcColorBlendFactor = toVkBlendFactor(attachment.SrcColorBlendFactor);
+			blend.dstColorBlendFactor = toVkBlendFactor(attachment.DstColorBlendFactor);
+			blend.colorBlendOp = toVkBlendOp(attachment.ColorBlendOp);
+			blend.srcAlphaBlendFactor = toVkBlendFactor(attachment.SrcAlphaBlendFactor);
+			blend.dstAlphaBlendFactor = toVkBlendFactor(attachment.DstAlphaBlendFactor);
+			blend.alphaBlendOp = toVkBlendOp(attachment.AlphaBlendOp);
 		}
 
 		colorAttachments[i] = blend;
@@ -248,16 +248,16 @@ VulkanPipeline* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphi
 	colorFormats.reserve(Descriptor.RenderTargetCount);
 	for (uint32_t i = 0; i < Descriptor.RenderTargetCount; ++i)
 	{
-		colorFormats.push_back(ToVkFormat(Descriptor.RenderTargetFormats[i]));
+		colorFormats.push_back(toVkFormat(Descriptor.RenderTargetFormats[i]));
 	}
 
 	VkPipelineRenderingCreateInfo renderingInfo{};
 	renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 	renderingInfo.colorAttachmentCount = static_cast<uint32_t>(colorFormats.size());
 	renderingInfo.pColorAttachmentFormats = colorFormats.data();
-	renderingInfo.depthAttachmentFormat = ToVkFormat(Descriptor.DepthStencilFormat);
+	renderingInfo.depthAttachmentFormat = toVkFormat(Descriptor.DepthStencilFormat);
 	renderingInfo.stencilAttachmentFormat = (Descriptor.DepthStencilFormat == EFormat::D24_UNorm_S8_UInt)
-		? ToVkFormat(Descriptor.DepthStencilFormat)
+		? toVkFormat(Descriptor.DepthStencilFormat)
 		: VK_FORMAT_UNDEFINED;
 
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -270,7 +270,7 @@ VulkanPipeline* CreateVulkanGraphicsPipeline(VulkanDevice* Device, const RGraphi
 	pipelineInfo.pViewportState = &viewportState;
 	pipelineInfo.pRasterizationState = &rasterizer;
 	pipelineInfo.pMultisampleState = &multisample;
-	pipelineInfo.pDepthStencilState = IsDepthFormat(Descriptor.DepthStencilFormat) ? &depthStencil : nullptr;
+	pipelineInfo.pDepthStencilState = isDepthFormat(Descriptor.DepthStencilFormat) ? &depthStencil : nullptr;
 	pipelineInfo.pColorBlendState = &colorBlend;
 	pipelineInfo.pDynamicState = &dynamicState;
 	pipelineInfo.layout = layout;

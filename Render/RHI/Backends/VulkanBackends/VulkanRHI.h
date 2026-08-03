@@ -7,24 +7,24 @@
 namespace render::rhi
 {
 
-VkFormat ToVkFormat(EFormat);
-VkIndexType ToVkIndexType(EIndexFormat);
-VkShaderStageFlags ToVkShaderStageFlags(EShaderStage);
-VkBufferUsageFlags ToVkBufferUsage(EBufferUsage);
-VkImageUsageFlags ToVkImageUsage(ETextureUsage);
-VkPrimitiveTopology ToVkPrimitiveTopology(EPrimitiveTopology);
-VkPolygonMode ToVkPolygonMode(EFillMode);
-VkCullModeFlags ToVkCullMode(ECullMode);
-VkCompareOp ToVkCompareOp(ECompareOp);
-VkStencilOp ToVkStencilOp(EStencilOp);
-VkSampleCountFlagBits ToVkSampleCount(ESampleCount);
-VkBlendFactor ToVkBlendFactor(EBlendFactor);
-VkBlendOp ToVkBlendOp(EBlendOp);
-VkImageLayout ToVkImageLayout(EResourceState);
-VkPipelineStageFlags ToVkPipelineStage(EResourceState);
-VkAccessFlags ToVkAccessMask(EResourceState);
-VkSharingMode ToVkSharingMode(ESharingMode);
-VkMemoryPropertyFlags ToVkMemoryPropertyFlags(EMemoryProperty);
-bool IsDepthFormat(EFormat);
+VkFormat toVkFormat(EFormat);
+VkIndexType toVkIndexType(EIndexFormat);
+VkShaderStageFlags toVkShaderStageFlags(EShaderStage);
+VkBufferUsageFlags toVkBufferUsage(EBufferUsage);
+VkImageUsageFlags toVkImageUsage(ETextureUsage);
+VkPrimitiveTopology toVkPrimitiveTopology(EPrimitiveTopology);
+VkPolygonMode toVkPolygonMode(EFillMode);
+VkCullModeFlags toVkCullMode(ECullMode);
+VkCompareOp toVkCompareOp(ECompareOp);
+VkStencilOp toVkStencilOp(EStencilOp);
+VkSampleCountFlagBits toVkSampleCount(ESampleCount);
+VkBlendFactor toVkBlendFactor(EBlendFactor);
+VkBlendOp toVkBlendOp(EBlendOp);
+VkImageLayout toVkImageLayout(EResourceState);
+VkPipelineStageFlags toVkPipelineStage(EResourceState);
+VkAccessFlags toVkAccessMask(EResourceState);
+VkSharingMode toVkSharingMode(ESharingMode);
+VkMemoryPropertyFlags toVkMemoryPropertyFlags(EMemoryProperty);
+bool isDepthFormat(EFormat);
 
 } // namespace render::rhi

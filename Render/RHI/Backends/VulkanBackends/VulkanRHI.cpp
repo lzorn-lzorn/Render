@@ -19,7 +19,7 @@ bool HasFlag(EnumT Value, EnumT Flag)
 
 } // namespace
 
-VkFormat ToVkFormat(EFormat Fomat)
+VkFormat toVkFormat(EFormat Fomat)
 {
 	switch (Fomat)
 	{
@@ -36,7 +36,7 @@ VkFormat ToVkFormat(EFormat Fomat)
 	}
 }
 
-VkIndexType ToVkIndexType(EIndexFormat Fomat)
+VkIndexType toVkIndexType(EIndexFormat Fomat)
 {
 	switch (Fomat)
 	{
@@ -52,7 +52,7 @@ VkIndexType ToVkIndexType(EIndexFormat Fomat)
 	}
 }
 
-VkShaderStageFlags ToVkShaderStageFlags(EShaderStage Stage)
+VkShaderStageFlags toVkShaderStageFlags(EShaderStage Stage)
 {
 	VkShaderStageFlags result = 0;
 	if (HasFlag(Stage, EShaderStage::Vertex)) result |= VK_SHADER_STAGE_VERTEX_BIT;
@@ -68,7 +68,7 @@ VkShaderStageFlags ToVkShaderStageFlags(EShaderStage Stage)
 	return result;
 }
 
-VkBufferUsageFlags ToVkBufferUsage(EBufferUsage Usage)
+VkBufferUsageFlags toVkBufferUsage(EBufferUsage Usage)
 {
 	VkBufferUsageFlags flags = 0;
 	if (HasFlag(Usage, EBufferUsage::Vertex)) flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -81,7 +81,7 @@ VkBufferUsageFlags ToVkBufferUsage(EBufferUsage Usage)
 	return flags;
 }
 
-VkImageUsageFlags ToVkImageUsage(ETextureUsage Usage)
+VkImageUsageFlags toVkImageUsage(ETextureUsage Usage)
 {
 	VkImageUsageFlags flags = 0;
 	if (HasFlag(Usage, ETextureUsage::Sampled)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -93,7 +93,7 @@ VkImageUsageFlags ToVkImageUsage(ETextureUsage Usage)
 	return flags;
 }
 
-VkPrimitiveTopology ToVkPrimitiveTopology(EPrimitiveTopology Topology)
+VkPrimitiveTopology toVkPrimitiveTopology(EPrimitiveTopology Topology)
 {
 	switch (Topology)
 	{
@@ -107,12 +107,12 @@ VkPrimitiveTopology ToVkPrimitiveTopology(EPrimitiveTopology Topology)
 	}
 }
 
-VkPolygonMode ToVkPolygonMode(EFillMode Mode)
+VkPolygonMode toVkPolygonMode(EFillMode Mode)
 {
 	return Mode == EFillMode::Wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 }
 
-VkCullModeFlags ToVkCullMode(ECullMode Mode)
+VkCullModeFlags toVkCullMode(ECullMode Mode)
 {
 	switch (Mode)
 	{
@@ -124,7 +124,7 @@ VkCullModeFlags ToVkCullMode(ECullMode Mode)
 	}
 }
 
-VkCompareOp ToVkCompareOp(ECompareOp Op)
+VkCompareOp toVkCompareOp(ECompareOp Op)
 {
 	switch (Op)
 	{
@@ -141,7 +141,7 @@ VkCompareOp ToVkCompareOp(ECompareOp Op)
 	}
 }
 
-VkStencilOp ToVkStencilOp(EStencilOp Op)
+VkStencilOp toVkStencilOp(EStencilOp Op)
 {
 	switch (Op)
 	{
@@ -158,7 +158,7 @@ VkStencilOp ToVkStencilOp(EStencilOp Op)
 	}
 }
 
-VkSampleCountFlagBits ToVkSampleCount(ESampleCount count)
+VkSampleCountFlagBits toVkSampleCount(ESampleCount count)
 {
 	switch (count)
 	{
@@ -174,7 +174,7 @@ VkSampleCountFlagBits ToVkSampleCount(ESampleCount count)
 	}
 }
 
-VkBlendFactor ToVkBlendFactor(EBlendFactor factor)
+VkBlendFactor toVkBlendFactor(EBlendFactor factor)
 {
 	switch (factor)
 	{
@@ -187,7 +187,7 @@ VkBlendFactor ToVkBlendFactor(EBlendFactor factor)
 	}
 }
 
-VkBlendOp ToVkBlendOp(EBlendOp Op)
+VkBlendOp toVkBlendOp(EBlendOp Op)
 {
 	switch (Op)
 	{
@@ -201,7 +201,7 @@ VkBlendOp ToVkBlendOp(EBlendOp Op)
 	}
 }
 
-VkImageLayout ToVkImageLayout(EResourceState State)
+VkImageLayout toVkImageLayout(EResourceState State)
 {
 	switch (State)
 	{
@@ -219,7 +219,7 @@ VkImageLayout ToVkImageLayout(EResourceState State)
 	}
 }
 
-VkPipelineStageFlags ToVkPipelineStage(EResourceState State)
+VkPipelineStageFlags toVkPipelineStage(EResourceState State)
 {
 	switch (State)
 	{
@@ -248,7 +248,7 @@ VkPipelineStageFlags ToVkPipelineStage(EResourceState State)
 	}
 }
 
-VkAccessFlags ToVkAccessMask(EResourceState State)
+VkAccessFlags toVkAccessMask(EResourceState State)
 {
 	switch (State)
 	{
@@ -270,12 +270,12 @@ VkAccessFlags ToVkAccessMask(EResourceState State)
 	}
 }
 
-VkSharingMode ToVkSharingMode(ESharingMode Mode)
+VkSharingMode toVkSharingMode(ESharingMode Mode)
 {
 	return (Mode == ESharingMode::Exclusive) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 }
 
-VkMemoryPropertyFlags ToVkMemoryPropertyFlags(EMemoryProperty Properties)
+VkMemoryPropertyFlags toVkMemoryPropertyFlags(EMemoryProperty Properties)
 {
     VkMemoryPropertyFlags Flags = 0;
 

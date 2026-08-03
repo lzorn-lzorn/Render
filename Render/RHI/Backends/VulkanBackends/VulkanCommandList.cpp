@@ -258,7 +258,7 @@ void VulkanCommandList::setIndexBuffer(RBuffer* Buffer, EIndexFormat Format)
 		return;
 	}
 
-	vkCmdBindIndexBuffer(CommandBuffer, vk_buffer->getVkBuffer(), 0, ToVkIndexType(Format));
+	vkCmdBindIndexBuffer(CommandBuffer, vk_buffer->getVkBuffer(), 0, toVkIndexType(Format));
 }
 
 void VulkanCommandList::setViewport(const RViewport& Viewport)
@@ -298,7 +298,7 @@ void VulkanCommandList::setPushConstants(EShaderStage stage, uint32_t offset, ui
 		return;
 	}
 
-	VkShaderStageFlags flags = ToVkShaderStageFlags(stage);
+	VkShaderStageFlags flags = toVkShaderStageFlags(stage);
 	if (flags == 0)
 	{
 		flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
@@ -414,10 +414,10 @@ void VulkanCommandList::resourceBarriers(std::span<const RResourceBarrier> Barri
 
 		VkImageMemoryBarrier image_barrier{};
 		image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		image_barrier.srcAccessMask = ToVkAccessMask(barrier.Before);
-		image_barrier.dstAccessMask = ToVkAccessMask(barrier.After);
-		image_barrier.oldLayout = ToVkImageLayout(barrier.Before);
-		image_barrier.newLayout = ToVkImageLayout(barrier.After);
+		image_barrier.srcAccessMask = toVkAccessMask(barrier.Before);
+		image_barrier.dstAccessMask = toVkAccessMask(barrier.After);
+		image_barrier.oldLayout = toVkImageLayout(barrier.Before);
+		image_barrier.newLayout = toVkImageLayout(barrier.After);
 		image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		image_barrier.image = texture->getVkImage();
@@ -429,8 +429,8 @@ void VulkanCommandList::resourceBarriers(std::span<const RResourceBarrier> Barri
 
 		vkCmdPipelineBarrier(
 			CommandBuffer,
-			ToVkPipelineStage(barrier.Before),
-			ToVkPipelineStage(barrier.After),
+			toVkPipelineStage(barrier.Before),
+			toVkPipelineStage(barrier.After),
 			0,
 			0,
 			nullptr,

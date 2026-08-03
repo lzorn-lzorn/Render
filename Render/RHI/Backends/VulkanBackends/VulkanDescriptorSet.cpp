@@ -44,7 +44,7 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VulkanDevice* InDevice, con
 		binding.binding = entry.Binding;
 		binding.descriptorType = ToVkDescriptorType(entry.Type);
 		binding.descriptorCount = entry.Count;
-		binding.stageFlags = ToVkShaderStageFlags(entry.Stage);
+		binding.stageFlags = toVkShaderStageFlags(entry.Stage);
 		binding.pImmutableSamplers = nullptr;
 		bindings.push_back(binding);
 	}

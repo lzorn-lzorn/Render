@@ -84,13 +84,13 @@ VulkanBuffer::VulkanBuffer(VulkanDevice* InDevice, const RBufferDescriptor& InBu
 	VkBufferCreateInfo buffer_info{};
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	buffer_info.size = static_cast<VkDeviceSize>(BufferDesc.Size);
-	buffer_info.usage = ToVkBufferUsage(BufferDesc.Usage);
+	buffer_info.usage = toVkBufferUsage(BufferDesc.Usage);
 	if (buffer_info.usage == 0)
 	{
 		buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	}
 
-	buffer_info.sharingMode = ToVkSharingMode(InBufferDesc.SharingMode);
+	buffer_info.sharingMode = toVkSharingMode(InBufferDesc.SharingMode);
 
 	VkDevice vk_device = Device->getVkDevice();
 	if (vkCreateBuffer(vk_device, &buffer_info, nullptr, &Buffer) != VK_SUCCESS)
@@ -102,7 +102,7 @@ VulkanBuffer::VulkanBuffer(VulkanDevice* InDevice, const RBufferDescriptor& InBu
 	VkMemoryRequirements memory_requirements{};
 	vkGetBufferMemoryRequirements(vk_device, Buffer, &memory_requirements);
 
-	const VkMemoryPropertyFlags memory_flags = ToVkMemoryPropertyFlags(BufferDesc.MemoryProperties);
+	const VkMemoryPropertyFlags memory_flags = toVkMemoryPropertyFlags(BufferDesc.MemoryProperties);
 	const uint32_t memory_type = Device->findMemoryType(memory_requirements.memoryTypeBits, memory_flags);
 	if (memory_type == UINT32_MAX)
 	{

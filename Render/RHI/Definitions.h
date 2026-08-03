@@ -63,12 +63,12 @@ enum class EFormat : uint32_t
 	// ...
 };
 
-inline bool IsDepthFormat(EFormat Format)
+inline bool isDepthFormat(EFormat Format)
 {
 	return Format == EFormat::D24_UNorm_S8_UInt || Format == EFormat::D32_Float;
 }
 
-inline bool IsDepthOnlyFormat(EFormat Format)
+inline bool isDepthOnlyFormat(EFormat Format)
 {
 	switch (Format) {
         case EFormat::D16_UNorm:
@@ -79,17 +79,17 @@ inline bool IsDepthOnlyFormat(EFormat Format)
     }
 }
 
-inline bool IsStencilOnlyFormat(EFormat Format)
+inline bool isStencilOnlyFormat(EFormat Format)
 {
 	return Format == EFormat::D24_UNorm_S8_UInt;
 }
 
-inline bool IsDepthStencilFormat(EFormat Format)
+inline bool isDepthStencilFormat(EFormat Format)
 {
 	return Format == EFormat::D24_UNorm_S8_UInt || Format == EFormat::D32_Float;
 }
 
-inline uint32_t CalPixelSizeFormEFormat(EFormat Format)
+inline uint32_t calPixelSizeFormEFormat(EFormat Format)
 {
 	switch (Format)
 	{
@@ -484,7 +484,7 @@ struct TextureHelper
 			return { nullptr, 0, 0 };
 		}
 
-		uint32_t pixel_size = CalPixelSizeFormEFormat(Desc.Format);
+		uint32_t pixel_size = calPixelSizeFormEFormat(Desc.Format);
 		const uint8_t* base_ptr = static_cast<const uint8_t*>(BulkDataPtr->Data);
 		uint32_t current_offset = 0;
 
