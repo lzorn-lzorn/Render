@@ -19,29 +19,14 @@ else()
     FetchContent_MakeAvailable(SDL3)
 endif()
 
-# ---------- 处理 dxcompiler ----------
-# 1. 找到 dxcompiler 的导入库和动态库
-find_library(DXCOMPILER_LIB dxcompiler REQUIRED)
-find_file(DXCOMPILER_DLL dxcompiler.dll REQUIRED)
-
-# 2. 创建 IMPORTED 共享库目标，让 CMake 知道它是一个带 DLL 的外部库
-add_library(dxcompiler SHARED IMPORTED)
-set_target_properties(dxcompiler PROPERTIES
-    IMPORTED_LOCATION "${DXCOMPILER_DLL}"
-    IMPORTED_IMPLIB   "${DXCOMPILER_LIB}"
-)
-
-# 3. (可选) 如果你的 DXC 版本还需要 dxil.dll，同样处理并建立依赖关系
-# find_file(DXIL_DLL dxil.dll REQUIRED)
-# add_library(dxil SHARED IMPORTED)
-# set_target_properties(dxil PROPERTIES IMPORTED_LOCATION "${DXIL_DLL}")
-# target_link_libraries(dxcompiler INTERFACE dxil)   # 告知 cmake dxcompiler 依赖 dxil
-
 # ---------- 主可执行程序 ----------
 add_executable(SandBox main.cpp)
 
 target_link_libraries(SandBox PRIVATE Renderer)
-target_link_libraries(SandBox PRIVATE dxcompiler)   # 现在 dxcompiler 是一个目标了
+if (NOT TARGET DXC::Compiler)
+    message(FATAL_ERROR "DXC::Compiler target not found. Ensure top-level CMake config sets up dxcompiler first.")
+endif()
+target_link_libraries(SandBox PRIVATE DXC::Compiler)
 
 target_include_directories(SandBox PRIVATE
     ${CMAKE_SOURCE_DIR}/glm
@@ -58,13 +43,19 @@ endif()
 
 # ---------- Windows 运行时自动化 ----------
 if (WIN32)
-    # 一行命令自动复制 SandBox 所有直接/间接依赖的运行时 DLL
-    # 包括 SDL3::SDL3 (如果是动态库)、dxcompiler.dll、dxil.dll(如果前面配置了) 等
+    # 复制 SandBox 的直接/间接运行时 DLL 依赖
     add_custom_command(TARGET SandBox POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_RUNTIME_DLLS:SandBox>
             $<TARGET_FILE_DIR:SandBox>
         COMMAND_EXPAND_LISTS
+    )
+
+    # 显式复制 DXC runtime，防止被 PATH 中其他版本抢占
+    add_custom_command(TARGET SandBox POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_PROPERTY:DXC::Compiler,IMPORTED_LOCATION>
+            $<TARGET_FILE_DIR:SandBox>
     )
 
     # 保持 Assets 资源复制（这个仍需手动处理，因为与链接无关）
@@ -74,7 +65,3 @@ if (WIN32)
         $<TARGET_FILE_DIR:SandBox>/Assets
     )
 endif()
-
-# TODO:
-# 对于 dxcompiler.dll 没有被复制到 SandBox.exe 所在目录的情况, 可以考虑使用 
-# 直接 clone https://github.com/microsoft/DirectXShaderCompiler.git 编译, 链接成静态库

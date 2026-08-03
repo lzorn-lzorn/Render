@@ -110,6 +110,35 @@ inline uint32_t CalPixelSizeFormEFormat(EFormat Format)
 	}
 }
 
+enum class EMemoryProperty : uint8_t
+{
+    None           = 0,
+    DeviceLocal    = 1 << 0,  // 位于 GPU 显存，访问最快
+    HostVisible    = 1 << 1,  // CPU 可映射访问（必须配合 HostVisible 才能用 vkMapMemory）
+    HostCoherent   = 1 << 2,  // 自动同步 CPU/GPU 缓存（免去手动 Flush/Invalidate）
+    HostCached     = 1 << 3,  // CPU 缓存中保留副本（适合频繁读回的场景）
+    LazilyAllocated = 1 << 4, // 惰性分配（用于深度/模板缓冲，节省显存）
+};
+
+inline bool operator==(EMemoryProperty a, EMemoryProperty b)
+{
+	return static_cast<uint8_t>(a) == static_cast<uint8_t>(b);
+}
+inline bool operator!=(EMemoryProperty a, EMemoryProperty b)
+{
+	return static_cast<uint8_t>(a) != static_cast<uint8_t>(b);
+}
+
+inline EMemoryProperty operator|(EMemoryProperty a, EMemoryProperty b)
+{
+	return static_cast<EMemoryProperty>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
+inline bool operator&(EMemoryProperty a, EMemoryProperty b)
+{
+	return (static_cast<uint8_t>(a) & static_cast<uint8_t>(b)) != 0;
+}
+
 enum class EBufferUsage : uint32_t
 {
 	None        = 0,
@@ -120,7 +149,14 @@ enum class EBufferUsage : uint32_t
 	Indirect    = 1 << 4,
 	TransferSrc = 1 << 5,
 	TransferDst = 1 << 6,
+};
 
+enum class EBufferMapMode : uint8_t
+{
+	Read,
+	Write,
+	ReadWrite,
+	WriteDiscard
 };
 
 inline EBufferUsage operator|(EBufferUsage a, EBufferUsage b)
@@ -165,6 +201,15 @@ enum class ETextureDimension : uint8_t
     CubeArray           // 立方体贴图数组(6 的整数倍面)
 };
 
+enum class ETextureAspect : uint8_t
+{
+	Auto,
+	Color,
+	Depth,
+	Stencil,
+	DepthStencil
+};
+
 enum class ESharingMode
 {
 	Exclusive,   // GPU 独占模式, 性能更高
@@ -189,6 +234,13 @@ inline EShaderStage operator|(EShaderStage a, EShaderStage b)
 inline EShaderStage operator&(EShaderStage a, EShaderStage b)
 {
 	return static_cast<EShaderStage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+template <typename EnumT>
+inline bool hasAnyFlags(EnumT Value, EnumT Mask)
+{
+	using UIntT = std::underlying_type_t<EnumT>;
+	return (static_cast<UIntT>(Value) & static_cast<UIntT>(Mask)) != 0;
 }
 
 enum class ECommandQueueType
@@ -342,23 +394,59 @@ class RBuffer : public RResource
 public:
 	virtual EResourceType getType() const override { return EResourceType::Buffer; }
 	virtual uint64_t getSize() const = 0;
+	virtual bool updateData(uint64_t Offset, const void* Data, uint64_t Size)
+	{
+		(void)Offset;
+		(void)Data;
+		(void)Size;
+		return false;
+	}
+	virtual void* mapRange(EBufferMapMode MapMode, uint64_t Offset = 0, uint64_t Size = 0)
+	{
+		(void)MapMode;
+		(void)Offset;
+		(void)Size;
+		return nullptr;
+	}
+	virtual void unmap() {}
+	virtual bool flushMappedRange(uint64_t Offset = 0, uint64_t Size = 0)
+	{
+		(void)Offset;
+		(void)Size;
+		return false;
+	}
+	virtual bool invalidateMappedRange(uint64_t Offset = 0, uint64_t Size = 0)
+	{
+		(void)Offset;
+		(void)Size;
+		return false;
+	}
+	virtual bool isCpuAccessible() const { return false; }
 };
 
 
 struct RBufferDescriptor
 {
 	EBufferUsage Usage = EBufferUsage::None;
-	uint32_t Size = 0;
-	bool IsCpuVisible = false;
+	ESharingMode SharingMode = ESharingMode::Exclusive;
+	EMemoryProperty MemoryProperties = EMemoryProperty::DeviceLocal;
+	uint64_t Size = 0;
+	
 	const void* InitialData = nullptr;
-	uint32_t InitialDataSize = 0;
+	uint64_t InitialDataSize = 0;
 	std::string Name;
+
+	bool isCpuAccessible() const noexcept
+	{
+		return (MemoryProperties & EMemoryProperty::HostVisible) != 0;
+	}
 };
 
 struct RTextureDescriptor
 {
 	ETextureUsage Usage = ETextureUsage::None;
 	EFormat Format = EFormat::BGRA8_UNorm;
+	ETextureDimension Dimension = ETextureDimension::Texture2D;
 	uint32_t Width = 1;
 	uint32_t Height = 1;
 	uint32_t Depth = 1;
@@ -618,6 +706,7 @@ struct RTextureViewDescriptor
 		DSV
 	};
 	EViewType Type = EViewType::SRV;
+	ETextureAspect Aspect = ETextureAspect::Auto;
 	EFormat Format = EFormat::Undefined;
 	uint32_t MipLevel = 0;
 	uint32_t MipLevelCount = 1;
@@ -770,6 +859,7 @@ class RTexture : public RResource
 public:
 	virtual EResourceType getType() const override { return EResourceType::Texture; }
 	virtual class RTextureView* createView(const RTextureViewDescriptor& Descriptor) = 0;
+	virtual const RTextureDescriptor& getDescriptor() const = 0;
 
 	/**
 	 * @brief 更新纹理数据
@@ -789,6 +879,10 @@ public:
 	 * @brief GPU自动生成纹理的mipmap
 	 */
 	virtual void generateMipmaps() = 0;
+	virtual ETextureUsage getUsage() const { return getDescriptor().Usage; }
+	virtual uint32_t getMipLevels() const { return getDescriptor().MipLevels; }
+	virtual uint32_t getArrayLayers() const { return getDescriptor().ArrayLayers; }
+	virtual ETextureDimension getDimension() const { return getDescriptor().Dimension; }
 	virtual uint32_t getWidth() const = 0;
 	virtual uint32_t getHeight() const = 0;
 	virtual uint32_t getDepth() const = 0;
@@ -909,6 +1003,7 @@ public:
 
 	// 资源创建
 	virtual RBuffer* createBuffer(const RBufferDescriptor& Descriptor) = 0;
+	virtual RBuffer* createStagingBuffer(const void* Data, uint64_t Size, uint64_t InitialDataSize = 0) = 0;
 	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor) = 0;
 	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor, RTextureBulkData data) = 0;
 

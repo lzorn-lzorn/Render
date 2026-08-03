@@ -459,8 +459,8 @@ int main(int argc, char* argv[])
 
         rhi::RBufferDescriptor vertexBufferDesc{};
         vertexBufferDesc.Usage = rhi::EBufferUsage::Vertex;
+        vertexBufferDesc.MemoryProperties = rhi::EMemoryProperty::HostVisible | rhi::EMemoryProperty::HostCoherent;
         vertexBufferDesc.Size = static_cast<uint32_t>(mesh.Vertices.size() * sizeof(Vertex));
-        vertexBufferDesc.IsCpuVisible = true;
         vertexBufferDesc.InitialData = mesh.Vertices.data();
         vertexBufferDesc.InitialDataSize = vertexBufferDesc.Size;
         vertexBufferDesc.Name = "IcosahedronVertices";
@@ -473,8 +473,8 @@ int main(int argc, char* argv[])
 
         rhi::RBufferDescriptor indexBufferDesc{};
         indexBufferDesc.Usage = rhi::EBufferUsage::Index;
+        indexBufferDesc.MemoryProperties = rhi::EMemoryProperty::HostVisible | rhi::EMemoryProperty::HostCoherent;
         indexBufferDesc.Size = static_cast<uint32_t>(mesh.Indices.size() * sizeof(uint32_t));
-        indexBufferDesc.IsCpuVisible = true;
         indexBufferDesc.InitialData = mesh.Indices.data();
         indexBufferDesc.InitialDataSize = indexBufferDesc.Size;
         indexBufferDesc.Name = "IcosahedronIndices";
@@ -487,8 +487,8 @@ int main(int argc, char* argv[])
 
         rhi::RBufferDescriptor edgeIndexBufferDesc{};
         edgeIndexBufferDesc.Usage = rhi::EBufferUsage::Index;
+        edgeIndexBufferDesc.MemoryProperties = rhi::EMemoryProperty::HostVisible | rhi::EMemoryProperty::HostCoherent;
         edgeIndexBufferDesc.Size = static_cast<uint32_t>(edgeIndices.size() * sizeof(uint32_t));
-        edgeIndexBufferDesc.IsCpuVisible = true;
         edgeIndexBufferDesc.InitialData = edgeIndices.data();
         edgeIndexBufferDesc.InitialDataSize = edgeIndexBufferDesc.Size;
         edgeIndexBufferDesc.Name = "IcosahedronEdges";

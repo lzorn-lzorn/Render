@@ -8,7 +8,64 @@
 namespace render::rhi
 {
 
+namespace
+{
 
+uint64_t clampCopySize(uint64_t Offset, uint64_t RequestedSize, uint64_t MaxSize)
+{
+	if (Offset >= MaxSize)
+	{
+		return 0;
+	}
+
+	const uint64_t available_size = MaxSize - Offset;
+	if (RequestedSize == 0)
+	{
+		return available_size;
+	}
+	return std::min<uint64_t>(RequestedSize, available_size);
+}
+
+bool buildMappedMemoryRange(
+	VulkanDevice* Device,
+	VkDeviceMemory Memory,
+	uint64_t BufferSize,
+	uint64_t Offset,
+	uint64_t Size,
+	VkMappedMemoryRange& OutRange)
+{
+	if (!Device || Memory == VK_NULL_HANDLE)
+	{
+		return false;
+	}
+
+	const uint64_t range_size = clampCopySize(Offset, Size, BufferSize);
+	if (range_size == 0)
+	{
+		return false;
+	}
+
+	VkPhysicalDeviceProperties properties{};
+	vkGetPhysicalDeviceProperties(Device->getVkPhysicalDevice(), &properties);
+
+	const uint64_t atom_size = std::max<uint64_t>(1, properties.limits.nonCoherentAtomSize);
+	const uint64_t aligned_offset = Offset - (Offset % atom_size);
+	const uint64_t aligned_end = Align<uint64_t>(Offset + range_size, atom_size);
+	const uint64_t clamped_end = std::min<uint64_t>(aligned_end, BufferSize);
+	if (clamped_end <= aligned_offset)
+	{
+		return false;
+	}
+
+	OutRange = {};
+	OutRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+	OutRange.memory = Memory;
+	OutRange.offset = static_cast<VkDeviceSize>(aligned_offset);
+	OutRange.size = static_cast<VkDeviceSize>(clamped_end - aligned_offset);
+	return true;
+}
+
+} // namespace
 
 VulkanBuffer::VulkanBuffer(VulkanDevice* InDevice, const RBufferDescriptor& InBufferDesc)
 	: Device(InDevice)
@@ -19,83 +76,95 @@ VulkanBuffer::VulkanBuffer(VulkanDevice* InDevice, const RBufferDescriptor& InBu
 		return;
 	}
 
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = BufferDesc.Size;
-	bufferInfo.usage = ToVkBufferUsage(BufferDesc.Usage);
-	if (bufferInfo.usage == 0)
+	if (BufferDesc.InitialData && BufferDesc.InitialDataSize > 0 && !BufferDesc.isCpuAccessible())
 	{
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		BufferDesc.Usage = BufferDesc.Usage | EBufferUsage::TransferDst;
 	}
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	VkDevice vkDevice = Device->getVkDevice();
-	if (vkCreateBuffer(vkDevice, &bufferInfo, nullptr, &Buffer) != VK_SUCCESS)
+	VkBufferCreateInfo buffer_info{};
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.size = static_cast<VkDeviceSize>(BufferDesc.Size);
+	buffer_info.usage = ToVkBufferUsage(BufferDesc.Usage);
+	if (buffer_info.usage == 0)
+	{
+		buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	}
+
+	buffer_info.sharingMode = ToVkSharingMode(InBufferDesc.SharingMode);
+
+	VkDevice vk_device = Device->getVkDevice();
+	if (vkCreateBuffer(vk_device, &buffer_info, nullptr, &Buffer) != VK_SUCCESS)
 	{
 		Buffer = VK_NULL_HANDLE;
 		return;
 	}
 
-	VkMemoryRequirements memoryRequirements{};
-	vkGetBufferMemoryRequirements(vkDevice, Buffer, &memoryRequirements);
+	VkMemoryRequirements memory_requirements{};
+	vkGetBufferMemoryRequirements(vk_device, Buffer, &memory_requirements);
 
-	const bool needsHostVisible = BufferDesc.IsCpuVisible || BufferDesc.InitialData != nullptr;
-	const VkMemoryPropertyFlags memoryFlags = needsHostVisible
-		? (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-		: VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-	const uint32_t memoryType = Device->findMemoryType(memoryRequirements.memoryTypeBits, memoryFlags);
-	if (memoryType == UINT32_MAX)
+	const VkMemoryPropertyFlags memory_flags = ToVkMemoryPropertyFlags(BufferDesc.MemoryProperties);
+	const uint32_t memory_type = Device->findMemoryType(memory_requirements.memoryTypeBits, memory_flags);
+	if (memory_type == UINT32_MAX)
 	{
-		vkDestroyBuffer(vkDevice, Buffer, nullptr);
+		vkDestroyBuffer(vk_device, Buffer, nullptr);
 		Buffer = VK_NULL_HANDLE;
 		return;
 	}
 
-	VkMemoryAllocateInfo allocateInfo{};
-	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocateInfo.allocationSize = memoryRequirements.size;
-	allocateInfo.memoryTypeIndex = memoryType;
+	VkMemoryAllocateInfo allocate_info{};
+	allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocate_info.allocationSize = memory_requirements.size;
+	allocate_info.memoryTypeIndex = memory_type;
 
-	if (vkAllocateMemory(vkDevice, &allocateInfo, nullptr, &Memory) != VK_SUCCESS)
+	if (vkAllocateMemory(vk_device, &allocate_info, nullptr, &Memory) != VK_SUCCESS)
 	{
-		vkDestroyBuffer(vkDevice, Buffer, nullptr);
+		vkDestroyBuffer(vk_device, Buffer, nullptr);
 		Buffer = VK_NULL_HANDLE;
 		Memory = VK_NULL_HANDLE;
 		return;
 	}
 
-	vkBindBufferMemory(vkDevice, Buffer, Memory, 0);
+	if (vkBindBufferMemory(vk_device, Buffer, Memory, 0) != VK_SUCCESS)
+	{
+		vkDestroyBuffer(vk_device, Buffer, nullptr);
+		vkFreeMemory(vk_device, Memory, nullptr);
+		Buffer = VK_NULL_HANDLE;
+		Memory = VK_NULL_HANDLE;
+		return;
+	}
 
 	if (BufferDesc.InitialData && BufferDesc.InitialDataSize > 0)
 	{
-		void* mappedData = nullptr;
-		if (vkMapMemory(vkDevice, Memory, 0, BufferDesc.InitialDataSize, 0, &mappedData) == VK_SUCCESS)
-		{
-			const uint32_t copySize = std::min(BufferDesc.Size, BufferDesc.InitialDataSize);
-			std::memcpy(mappedData, BufferDesc.InitialData, copySize);
-			vkUnmapMemory(vkDevice, Memory);
-		}
+		const uint64_t copy_size = std::min<uint64_t>(BufferDesc.Size, BufferDesc.InitialDataSize);
+		updateData(0, BufferDesc.InitialData, copy_size);
 	}
 }
 
 VulkanBuffer::~VulkanBuffer()
 {
-	VkDevice vkDevice = Device ? Device->getVkDevice() : VK_NULL_HANDLE;
-	if (vkDevice == VK_NULL_HANDLE)
+	VkDevice vk_device = Device ? Device->getVkDevice() : VK_NULL_HANDLE;
+	if (vk_device == VK_NULL_HANDLE)
 	{
 		return;
 	}
 
+	if (MappedPtr != nullptr && Memory != VK_NULL_HANDLE)
+	{
+		vkUnmapMemory(vk_device, Memory);
+		MappedPtr = nullptr;
+		MappedOffset = 0;
+		MappedSize = 0;
+	}
+
 	if (Buffer != VK_NULL_HANDLE)
 	{
-		vkDestroyBuffer(vkDevice, Buffer, nullptr);
+		vkDestroyBuffer(vk_device, Buffer, nullptr);
 		Buffer = VK_NULL_HANDLE;
 	}
 
 	if (Memory != VK_NULL_HANDLE)
 	{
-		vkFreeMemory(vkDevice, Memory, nullptr);
+		vkFreeMemory(vk_device, Memory, nullptr);
 		Memory = VK_NULL_HANDLE;
 	}
 }
@@ -108,6 +177,174 @@ bool VulkanBuffer::isValid() const
 uint64_t VulkanBuffer::getSize() const
 {
 	return BufferDesc.Size;
+}
+
+bool VulkanBuffer::updateData(uint64_t Offset, const void* Data, uint64_t Size)
+{
+	if (!Data || Size == 0 || !isValid())
+	{
+		return false;
+	}
+
+	const uint64_t copy_size = clampCopySize(Offset, Size, BufferDesc.Size);
+	if (copy_size == 0)
+	{
+		return false;
+	}
+
+	if (isCpuAccessible())
+	{
+		void* mapped_ptr = mapRange(EBufferMapMode::Write, Offset, copy_size);
+		if (!mapped_ptr)
+		{
+			return false;
+		}
+
+		std::memcpy(mapped_ptr, Data, static_cast<size_t>(copy_size));
+		if (!hasAnyFlags(BufferDesc.MemoryProperties, EMemoryProperty::HostCoherent))
+		{
+			flushMappedRange(Offset, copy_size);
+		}
+		unmap();
+		return true;
+	}
+
+	if (!Device || !hasAnyFlags(BufferDesc.Usage, EBufferUsage::TransferDst))
+	{
+		return false;
+	}
+
+	RBuffer* staging_buffer_base = Device->createStagingBuffer(Data, copy_size, copy_size);
+	auto* staging_buffer = static_cast<VulkanBuffer*>(staging_buffer_base);
+	if (!staging_buffer || !staging_buffer->isValid())
+	{
+		Device->destroyResource(staging_buffer_base);
+		return false;
+	}
+
+	VkCommandBuffer command_buffer = Device->beginImmediateCommand();
+	VkBufferCopy copy_region{};
+	copy_region.srcOffset = 0;
+	copy_region.dstOffset = static_cast<VkDeviceSize>(Offset);
+	copy_region.size = static_cast<VkDeviceSize>(copy_size);
+	vkCmdCopyBuffer(command_buffer, staging_buffer->getVkBuffer(), Buffer, 1, &copy_region);
+	Device->endImmediateCommand(command_buffer);
+
+	Device->destroyResource(staging_buffer_base);
+	return true;
+}
+
+void* VulkanBuffer::mapRange(EBufferMapMode MapMode, uint64_t Offset, uint64_t Size)
+{
+	if (!Device || !isValid() || !isCpuAccessible())
+	{
+		return nullptr;
+	}
+
+	const uint64_t map_size = clampCopySize(Offset, Size, BufferDesc.Size);
+	if (map_size == 0)
+	{
+		return nullptr;
+	}
+
+	if (MappedPtr != nullptr)
+	{
+		if (Offset == MappedOffset && map_size <= MappedSize)
+		{
+			return MappedPtr;
+		}
+		return nullptr;
+	}
+
+	VkDevice vk_device = Device->getVkDevice();
+	if (vk_device == VK_NULL_HANDLE)
+	{
+		return nullptr;
+	}
+
+	void* mapped_ptr = nullptr;
+	if (vkMapMemory(vk_device, Memory, static_cast<VkDeviceSize>(Offset), static_cast<VkDeviceSize>(map_size), 0, &mapped_ptr) != VK_SUCCESS)
+	{
+		return nullptr;
+	}
+
+	MappedPtr = mapped_ptr;
+	MappedOffset = Offset;
+	MappedSize = map_size;
+
+	if (!hasAnyFlags(BufferDesc.MemoryProperties, EMemoryProperty::HostCoherent) &&
+		(MapMode == EBufferMapMode::Read || MapMode == EBufferMapMode::ReadWrite))
+	{
+		invalidateMappedRange(Offset, map_size);
+	}
+
+	return MappedPtr;
+}
+
+void VulkanBuffer::unmap()
+{
+	if (!Device || Memory == VK_NULL_HANDLE || MappedPtr == nullptr)
+	{
+		return;
+	}
+
+	VkDevice vk_device = Device->getVkDevice();
+	if (vk_device == VK_NULL_HANDLE)
+	{
+		return;
+	}
+
+	vkUnmapMemory(vk_device, Memory);
+	MappedPtr = nullptr;
+	MappedOffset = 0;
+	MappedSize = 0;
+}
+
+bool VulkanBuffer::flushMappedRange(uint64_t Offset, uint64_t Size)
+{
+	if (!Device || !isValid() || !isCpuAccessible())
+	{
+		return false;
+	}
+
+	if (hasAnyFlags(BufferDesc.MemoryProperties, EMemoryProperty::HostCoherent))
+	{
+		return true;
+	}
+
+	VkMappedMemoryRange range{};
+	if (!buildMappedMemoryRange(Device, Memory, BufferDesc.Size, Offset, Size, range))
+	{
+		return false;
+	}
+
+	return vkFlushMappedMemoryRanges(Device->getVkDevice(), 1, &range) == VK_SUCCESS;
+}
+
+bool VulkanBuffer::invalidateMappedRange(uint64_t Offset, uint64_t Size)
+{
+	if (!Device || !isValid() || !isCpuAccessible())
+	{
+		return false;
+	}
+
+	if (hasAnyFlags(BufferDesc.MemoryProperties, EMemoryProperty::HostCoherent))
+	{
+		return true;
+	}
+
+	VkMappedMemoryRange range{};
+	if (!buildMappedMemoryRange(Device, Memory, BufferDesc.Size, Offset, Size, range))
+	{
+		return false;
+	}
+
+	return vkInvalidateMappedMemoryRanges(Device->getVkDevice(), 1, &range) == VK_SUCCESS;
+}
+
+bool VulkanBuffer::isCpuAccessible() const
+{
+	return hasAnyFlags(BufferDesc.MemoryProperties, EMemoryProperty::HostVisible);
 }
 
 void VulkanBuffer::setDebugName(const std::string& Name)
@@ -145,10 +382,10 @@ VulkanSampler::~VulkanSampler()
 		return;
 	}
 
-	VkDevice vkDevice = Device->getVkDevice();
-	if (vkDevice != VK_NULL_HANDLE && Sampler != VK_NULL_HANDLE)
+	VkDevice vk_device = Device->getVkDevice();
+	if (vk_device != VK_NULL_HANDLE && Sampler != VK_NULL_HANDLE)
 	{
-		vkDestroySampler(vkDevice, Sampler, nullptr);
+		vkDestroySampler(vk_device, Sampler, nullptr);
 		Sampler = VK_NULL_HANDLE;
 	}
 }

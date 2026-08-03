@@ -75,6 +75,12 @@ VulkanDevice::~VulkanDevice()
 
 	if (Device != VK_NULL_HANDLE)
 	{
+		if (ImmediateCommandPool != VK_NULL_HANDLE)
+		{
+			vkDestroyCommandPool(Device, ImmediateCommandPool, nullptr);
+			ImmediateCommandPool = VK_NULL_HANDLE;
+		}
+
 		vkDestroyDevice(Device, nullptr);
 		Device = VK_NULL_HANDLE;
 	}
@@ -93,9 +99,26 @@ RBuffer* VulkanDevice::createBuffer(const RBufferDescriptor& Descriptor)
 	return new VulkanBuffer(this, Descriptor);
 }
 
+RBuffer* VulkanDevice::createStagingBuffer(const void* Data, uint64_t Size, uint64_t InitialDataSize)
+{
+	RBufferDescriptor Descriptor{};
+	Descriptor.Size = Size;
+	Descriptor.Usage = EBufferUsage::TransferSrc;
+	Descriptor.MemoryProperties = EMemoryProperty::HostVisible | EMemoryProperty::HostCoherent;
+	Descriptor.InitialData = Data;
+	Descriptor.InitialDataSize = InitialDataSize;
+	Descriptor.Name = "StagingBuffer";
+	return new VulkanBuffer(this, Descriptor);
+}
+
 RTexture* VulkanDevice::createTexture(const RTextureDescriptor& Descriptor)
 {
 	return new VulkanTexture(this, Descriptor);
+}
+
+RTexture* VulkanDevice::createTexture(const RTextureDescriptor& Descriptor, RTextureBulkData Data)
+{
+	return new VulkanTexture(this, Descriptor, Data);
 }
 
 RSampler* VulkanDevice::createSampler(const RSamplerDescriptor& Descriptor)
@@ -273,6 +296,75 @@ VkSurfaceKHR VulkanDevice::createSurface(void* NativeWindowHandle) const
 	(void)NativeWindowHandle;
 	return VK_NULL_HANDLE;
 #endif
+}
+
+VkCommandBuffer VulkanDevice::beginImmediateCommand()
+{
+	if (Device == VK_NULL_HANDLE || ImmediateCommandPool == VK_NULL_HANDLE)
+	{
+		return VK_NULL_HANDLE;
+	}
+
+	VkCommandBufferAllocateInfo allocate_info{};
+	allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocate_info.commandPool = ImmediateCommandPool;
+	allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocate_info.commandBufferCount = 1;
+
+	VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+	if (vkAllocateCommandBuffers(Device, &allocate_info, &command_buffer) != VK_SUCCESS)
+	{
+		return VK_NULL_HANDLE;
+	}
+
+	VkCommandBufferBeginInfo begin_info{};
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS)
+	{
+		vkFreeCommandBuffers(Device, ImmediateCommandPool, 1, &command_buffer);
+		return VK_NULL_HANDLE;
+	}
+
+	return command_buffer;
+}
+
+void VulkanDevice::endImmediateCommand(VkCommandBuffer CommandBuffer)
+{
+	if (Device == VK_NULL_HANDLE || ImmediateCommandPool == VK_NULL_HANDLE || CommandBuffer == VK_NULL_HANDLE)
+	{
+		return;
+	}
+
+	if (vkEndCommandBuffer(CommandBuffer) != VK_SUCCESS)
+	{
+		vkFreeCommandBuffers(Device, ImmediateCommandPool, 1, &CommandBuffer);
+		return;
+	}
+
+	VkSubmitInfo submit_info{};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &CommandBuffer;
+
+	VkFenceCreateInfo fence_info{};
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	VkFence submit_fence = VK_NULL_HANDLE;
+	if (vkCreateFence(Device, &fence_info, nullptr, &submit_fence) != VK_SUCCESS)
+	{
+		vkFreeCommandBuffers(Device, ImmediateCommandPool, 1, &CommandBuffer);
+		return;
+	}
+
+	const VkQueue submit_queue = GraphicsQueue != VK_NULL_HANDLE ? GraphicsQueue : getVkQueue(ECommandQueueType::Graphics);
+	if (submit_queue != VK_NULL_HANDLE)
+	{
+		vkQueueSubmit(submit_queue, 1, &submit_info, submit_fence);
+		vkWaitForFences(Device, 1, &submit_fence, VK_TRUE, UINT64_MAX);
+	}
+
+	vkDestroyFence(Device, submit_fence, nullptr);
+	vkFreeCommandBuffers(Device, ImmediateCommandPool, 1, &CommandBuffer);
 }
 
 bool VulkanDevice::createInstance()
@@ -458,6 +550,17 @@ bool VulkanDevice::createLogicalDevice()
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue);
 	vkGetDeviceQueue(Device, ComputeQueueFamilyIndex, 0, &ComputeQueue);
 	vkGetDeviceQueue(Device, CopyQueueFamilyIndex, 0, &CopyQueue);
+
+	VkCommandPoolCreateInfo pool_info{};
+	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	pool_info.queueFamilyIndex = GraphicsQueueFamilyIndex;
+	if (vkCreateCommandPool(Device, &pool_info, nullptr, &ImmediateCommandPool) != VK_SUCCESS)
+	{
+		vkDestroyDevice(Device, nullptr);
+		Device = VK_NULL_HANDLE;
+		return false;
+	}
 
 	return true;
 }

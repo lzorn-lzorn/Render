@@ -37,13 +37,12 @@ if (WIN32)
     target_compile_definitions(${LibarayName} PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 
-# ! 这里有一个潜在的问题: 这里 target_link_libraries 链接的 dxcompiler 在 windows 下
-# ! 只是一个 dxcompiler.lib 也就是一个导入库, 实际运行的时候生成的 Debug/ Release/ 下
-# ! 需要有 dxcompiler.dll, 否则运行的时候会运行时报错提示没有生成 SPIRV code
-target_link_libraries(${LibarayName} 
-    PRIVATE 
-		dxcompiler
-)
+if (TARGET DXC::Compiler)
+    target_link_libraries(${LibarayName}
+        PRIVATE
+            DXC::Compiler
+    )
+endif()
 
 target_include_directories(${LibarayName} 
 	PUBLIC 

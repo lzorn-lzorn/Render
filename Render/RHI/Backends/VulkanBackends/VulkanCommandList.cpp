@@ -6,6 +6,7 @@
 #include "VulkanPipeline.h"
 #include "VulkanResources.h"
 
+#include <algorithm>
 #include <vector>
 
 namespace render::rhi
@@ -355,6 +356,21 @@ void VulkanCommandList::copyTexture(RTexture* Src, RTexture* Dst, const RTexture
 		return;
 	}
 
+	const uint32_t src_width = std::max(1u, src_texture->getWidth() >> Descriptor.SrcMipLevel);
+	const uint32_t src_height = std::max(1u, src_texture->getHeight() >> Descriptor.SrcMipLevel);
+	const uint32_t src_depth = std::max(1u, src_texture->getDepth() >> Descriptor.SrcMipLevel);
+	const uint32_t dst_width = std::max(1u, dst_texture->getWidth() >> Descriptor.DstMipLevel);
+	const uint32_t dst_height = std::max(1u, dst_texture->getHeight() >> Descriptor.DstMipLevel);
+	const uint32_t dst_depth = std::max(1u, dst_texture->getDepth() >> Descriptor.DstMipLevel);
+
+	const uint32_t copy_width = Descriptor.Width == 0 ? std::min(src_width, dst_width) : Descriptor.Width;
+	const uint32_t copy_height = Descriptor.Height == 0 ? std::min(src_height, dst_height) : Descriptor.Height;
+	const uint32_t copy_depth = Descriptor.Depth == 0 ? std::min(src_depth, dst_depth) : Descriptor.Depth;
+	if (copy_width == 0 || copy_height == 0 || copy_depth == 0)
+	{
+		return;
+	}
+
 	VkImageCopy copy_region{};
 	copy_region.srcSubresource.aspectMask = src_texture->getAspectMask();
 	copy_region.srcSubresource.mipLevel = Descriptor.SrcMipLevel;
@@ -364,7 +380,7 @@ void VulkanCommandList::copyTexture(RTexture* Src, RTexture* Dst, const RTexture
 	copy_region.dstSubresource.mipLevel = Descriptor.DstMipLevel;
 	copy_region.dstSubresource.baseArrayLayer = Descriptor.DstArrayLayer;
 	copy_region.dstSubresource.layerCount = 1;
-	copy_region.extent = { Descriptor.Width, Descriptor.Height, Descriptor.Depth };
+	copy_region.extent = { copy_width, copy_height, copy_depth };
 
 	vkCmdCopyImage(
 		CommandBuffer,
@@ -407,9 +423,9 @@ void VulkanCommandList::resourceBarriers(std::span<const RResourceBarrier> Barri
 		image_barrier.image = texture->getVkImage();
 		image_barrier.subresourceRange.aspectMask = texture->getAspectMask();
 		image_barrier.subresourceRange.baseMipLevel = 0;
-		image_barrier.subresourceRange.levelCount = 1;
+		image_barrier.subresourceRange.levelCount = texture->getMipLevels();
 		image_barrier.subresourceRange.baseArrayLayer = 0;
-		image_barrier.subresourceRange.layerCount = 1;
+		image_barrier.subresourceRange.layerCount = texture->getArrayLayers();
 
 		vkCmdPipelineBarrier(
 			CommandBuffer,

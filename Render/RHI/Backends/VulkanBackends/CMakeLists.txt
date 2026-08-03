@@ -10,6 +10,7 @@ target_sources(${LibarayName} PRIVATE
 	VulkanDescriptorSet.cpp
 	VulkanCommandList.cpp
 	VulkanSwapchain.cpp
+	VulkanTexture.cpp
 )
 
 target_include_directories(${LibarayName} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

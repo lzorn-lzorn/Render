@@ -5,83 +5,92 @@
 
 #include <vulkan/vulkan.h>
 
+#include <cstdint>
 #include <vector>
 
 namespace render::rhi
 {
 
-inline VkImageAspectFlags AspectMask(const RTextureViewDescriptor::EViewType& ViewType, const EFormat TextureFormat)
+inline VkImageAspectFlags toVkImageAspectMask(ETextureAspect Aspect, EFormat TextureFormat)
 {
-	// 根据视图类型决定默认 aspect 策略
-	switch (ViewType) {
-		case RTextureViewDescriptor::EViewType::DSV:
+	switch (Aspect)
+	{
+	case ETextureAspect::Color:
+		return VK_IMAGE_ASPECT_COLOR_BIT;
+	case ETextureAspect::Depth:
+		return VK_IMAGE_ASPECT_DEPTH_BIT;
+	case ETextureAspect::Stencil:
+		return VK_IMAGE_ASPECT_STENCIL_BIT;
+	case ETextureAspect::DepthStencil:
+		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	case ETextureAspect::Auto:
+	default:
+		if (IsDepthStencilFormat(TextureFormat))
 		{
-			// 深度模板视图：必须考虑深度/模板分量
-			if (IsDepthStencilFormat(TextureFormat)) {
-				// 混合格式默认同时包含深度和模板
-				return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-			}
-			if (IsDepthOnlyFormat(TextureFormat)) {
+			if (IsDepthOnlyFormat(TextureFormat))
+			{
 				return VK_IMAGE_ASPECT_DEPTH_BIT;
 			}
-			if (IsStencilOnlyFormat(TextureFormat)) {
+			if (IsStencilOnlyFormat(TextureFormat))
+			{
 				return VK_IMAGE_ASPECT_STENCIL_BIT;
 			}
-			// 其他格式不能作为 DSV，这里可记录错误并返回 0
-			return 0;
+			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
-
-		case RTextureViewDescriptor::EViewType::SRV:
-		{
-			// 着色器资源视图：可以读取深度或模板，也可能读取整个纹理
-			if (IsDepthStencilFormat(TextureFormat)) {
-				// 默认：深度+模板都读取（用于阴影贴图比较、纹理采样等）
-				// 但如果视图希望只读取深度（如以 R32 格式读取深度），可以
-				// 通过 TextureFormat 进一步细化。例如若 TextureFormat 为 D32_Float
-				// 则已经是 depth-only，下面的 IsDepthOnlyFormat 会捕获。
-				if (IsDepthOnlyFormat(TextureFormat)) {
-					return VK_IMAGE_ASPECT_DEPTH_BIT;
-				}
-				// 如果 TextureFormat 仍然是 D24_S8 混合格式，说明要完整采样
-				return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-			}
-			if (IsDepthOnlyFormat(TextureFormat)) {
-				return VK_IMAGE_ASPECT_DEPTH_BIT;
-			}
-			if (IsStencilOnlyFormat(TextureFormat)) {
-				return VK_IMAGE_ASPECT_STENCIL_BIT;
-			}
-			// 颜色或其它格式
-			return VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-
-		case RTextureViewDescriptor::EViewType::UAV:
-		{
-			// 无序访问视图：一般只有颜色或深度/模板单独分量可写入
-			if (IsDepthOnlyFormat(TextureFormat) || IsDepthStencilFormat(TextureFormat)) {
-				// 某些平台允许以 UAV 写入深度（如 R32_UINT 映射），通常返回深度 aspect
-				return VK_IMAGE_ASPECT_DEPTH_BIT;
-			}
-			if (IsStencilOnlyFormat(TextureFormat)) {
-				return VK_IMAGE_ASPECT_STENCIL_BIT;
-			}
-			return VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-
-		default:
-			// 未知视图类型，回退到格式驱动的默认 mask
-			if (IsDepthStencilFormat(TextureFormat)) 
-				return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-			if (IsDepthOnlyFormat(TextureFormat)) 
-				return VK_IMAGE_ASPECT_DEPTH_BIT;
-			if (IsStencilOnlyFormat(TextureFormat)) 
-				return VK_IMAGE_ASPECT_STENCIL_BIT;
-			return VK_IMAGE_ASPECT_COLOR_BIT;
+		return VK_IMAGE_ASPECT_COLOR_BIT;
 	}
 }
 
+inline VkImageAspectFlags toVkImageAspectMask(const RTextureViewDescriptor& ViewDescriptor, EFormat TextureFormat)
+{
+	if (ViewDescriptor.Aspect != ETextureAspect::Auto)
+	{
+		return toVkImageAspectMask(ViewDescriptor.Aspect, TextureFormat);
+	}
+
+	switch (ViewDescriptor.Type)
+	{
+	case RTextureViewDescriptor::EViewType::DSV:
+		if (IsDepthOnlyFormat(TextureFormat))
+		{
+			return VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+		if (IsStencilOnlyFormat(TextureFormat))
+		{
+			return VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		if (IsDepthStencilFormat(TextureFormat))
+		{
+			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		return 0;
+	case RTextureViewDescriptor::EViewType::UAV:
+	case RTextureViewDescriptor::EViewType::SRV:
+	case RTextureViewDescriptor::EViewType::RTV:
+	default:
+		return toVkImageAspectMask(ETextureAspect::Auto, TextureFormat);
+	}
+}
 
 class VulkanDevice;
+
+enum class EVulkanImageOwnership : uint8_t
+{
+	Owned,
+	External
+};
+
+struct VulkanImageResource
+{
+	VkImage Image = VK_NULL_HANDLE;
+	VkDeviceMemory Memory = VK_NULL_HANDLE;
+	VkImageLayout Layout = VK_IMAGE_LAYOUT_UNDEFINED;
+	EVulkanImageOwnership Ownership = EVulkanImageOwnership::Owned;
+
+	bool isValid() const noexcept { return Image != VK_NULL_HANDLE; }
+	bool ownsImage() const noexcept { return Ownership == EVulkanImageOwnership::Owned; }
+	bool ownsMemory() const noexcept { return Ownership == EVulkanImageOwnership::Owned && Memory != VK_NULL_HANDLE; }
+};
 
 class VulkanBuffer : public RBuffer
 {
@@ -91,7 +100,15 @@ public:
 
 	bool isValid() const override;
 	uint64_t getSize() const override;
+	bool updateData(uint64_t Offset, const void* Data, uint64_t Size) override;
+	void* mapRange(EBufferMapMode MapMode, uint64_t Offset = 0, uint64_t Size = 0) override;
+	void unmap() override;
+	bool flushMappedRange(uint64_t Offset = 0, uint64_t Size = 0) override;
+	bool invalidateMappedRange(uint64_t Offset = 0, uint64_t Size = 0) override;
+	bool isCpuAccessible() const override;
+
 	VkBuffer getVkBuffer() const noexcept { return Buffer; }
+	VkDeviceMemory getVkDeviceMemory() const noexcept { return Memory; }
 
 private:
 	void setDebugName(const std::string& Name) override;
@@ -100,6 +117,9 @@ private:
 	RBufferDescriptor BufferDesc{};
 	VkBuffer Buffer = VK_NULL_HANDLE;
 	VkDeviceMemory Memory = VK_NULL_HANDLE;
+	void* MappedPtr = nullptr;
+	uint64_t MappedOffset = 0;
+	uint64_t MappedSize = 0;
 };
 
 class VulkanTextureView;
@@ -107,33 +127,17 @@ class VulkanTextureView;
 class VulkanTexture : public RTexture
 {
 public:
-	VkImageAspectFlags GetAspectMask(EFormat format) {
-        if (IsDepthStencilFormat(format)) {
-            // 包含深度和模板两个分量
-            return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-        } 
-        else if (IsDepthOnlyFormat(format)) {
-            return VK_IMAGE_ASPECT_DEPTH_BIT;
-        }
-        else if (IsStencilOnlyFormat(format)) {
-            return VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-        else {
-            // 所有颜色格式，包括压缩格式、YUV 等
-            return VK_IMAGE_ASPECT_COLOR_BIT;
-        }
-    }
-public:
 	VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc);
 	VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc, const RTextureBulkData& InBulkData);
 	VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc, VkImage InExternalImage, VkImageView InExternalView);
 	~VulkanTexture() override;
 
 	bool isValid() const override;
+	const RTextureDescriptor& getDescriptor() const override { return TextureDesc; }
 
 	void updateTexture(const RTextureUpdateRegion& Region, const void* SrcData, uint32_t SrcRowPitch, uint32_t SrcDepthPitch = 0) override;
-
 	void generateMipmaps() override;
+
 	uint32_t getWidth() const override { return TextureDesc.Width; }
 	uint32_t getHeight() const override { return TextureDesc.Height; }
 	uint32_t getDepth() const override { return TextureDesc.Depth; }
@@ -142,25 +146,37 @@ public:
 	RTextureView* createView(const RTextureViewDescriptor& Descriptor) override;
 	RTextureView* getDefaultView() const noexcept { return DefaultView; }
 
-	VkImage getVkImage() const noexcept { return Image; }
+	VkImage getVkImage() const noexcept { return ImageResource.Image; }
 	VkImageAspectFlags getAspectMask() const noexcept;
+	VkImageLayout getVkImageLayout() const noexcept { return ImageResource.Layout; }
 	VulkanDevice* getDevice() const noexcept { return Device; }
 
 private:
+	bool initializeImage();
+	bool allocateImageMemory();
+	bool uploadBulkData(const RTextureBulkData& InBulkData);
+	bool transitionImageLayout(
+		VkCommandBuffer CommandBuffer,
+		VkImageLayout NewLayout,
+		VkPipelineStageFlags SrcStage,
+		VkPipelineStageFlags DstStage,
+		VkAccessFlags SrcAccess,
+		VkAccessFlags DstAccess,
+		const VkImageSubresourceRange* SubresourceRange = nullptr);
+	VkImageSubresourceRange buildSubresourceRange(
+		uint32_t BaseMipLevel,
+		uint32_t MipLevelCount,
+		uint32_t BaseArrayLayer,
+		uint32_t ArrayLayerCount) const;
+	RTextureViewDescriptor buildDefaultViewDescriptor() const;
 	void setDebugName(const std::string& Name) override;
 
 	VulkanDevice* Device = nullptr;
 	RTextureDescriptor TextureDesc{};
-	RTextureBulkData BulkData{};
-	VkImage Image = VK_NULL_HANDLE;
-	VkDeviceMemory Memory = VK_NULL_HANDLE;
-	bool OwnsImage = true;
-
+	VulkanImageResource ImageResource{};
 	RTextureView* DefaultView = nullptr;
 	std::vector<RTextureView*> Views;
 };
-
-
 
 class VulkanTextureView : public RTextureView
 {
@@ -169,7 +185,7 @@ public:
 	~VulkanTextureView() override;
 
 	bool isValid() const override;
-	
+
 	RTexture* getTexture() const override { return Texture; }
 	RTextureViewDescriptor getDescriptor() const override { return Descriptor; }
 	VkImageView getVkImageView() const noexcept { return View; }

@@ -24,6 +24,7 @@ VkImageLayout ToVkImageLayout(EResourceState);
 VkPipelineStageFlags ToVkPipelineStage(EResourceState);
 VkAccessFlags ToVkAccessMask(EResourceState);
 VkSharingMode ToVkSharingMode(ESharingMode);
+VkMemoryPropertyFlags ToVkMemoryPropertyFlags(EMemoryProperty);
 bool IsDepthFormat(EFormat);
 
 } // namespace render::rhi

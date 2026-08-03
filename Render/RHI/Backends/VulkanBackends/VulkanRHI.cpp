@@ -275,6 +275,27 @@ VkSharingMode ToVkSharingMode(ESharingMode Mode)
 	return (Mode == ESharingMode::Exclusive) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 }
 
+VkMemoryPropertyFlags ToVkMemoryPropertyFlags(EMemoryProperty Properties)
+{
+    VkMemoryPropertyFlags Flags = 0;
+
+    if (static_cast<bool>(Properties & EMemoryProperty::DeviceLocal))
+        Flags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    
+    if (static_cast<bool>(Properties & EMemoryProperty::HostVisible))
+        Flags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    
+    if (static_cast<bool>(Properties & EMemoryProperty::HostCoherent))
+        Flags |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    
+    if (static_cast<bool>(Properties & EMemoryProperty::HostCached))
+        Flags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+    
+    if (static_cast<bool>(Properties & EMemoryProperty::LazilyAllocated))
+        Flags |= VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+
+    return Flags;
+}
 std::unique_ptr<RDevice> CreateVulkanDevice()
 {
 	auto device = std::make_unique<VulkanDevice>();

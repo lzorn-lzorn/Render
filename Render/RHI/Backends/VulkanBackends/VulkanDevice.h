@@ -31,6 +31,7 @@ public:
 	~VulkanDevice() override;
 
 	RBuffer* createBuffer(const RBufferDescriptor& Descriptor) override;
+	RBuffer* createStagingBuffer(const void* Data, uint64_t Size, uint64_t InitialDataSize = 0) override;
 	RTexture* createTexture(const RTextureDescriptor& Descriptor) override;
 	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor, RTextureBulkData data) override;
 
@@ -43,7 +44,7 @@ public:
 	RCommandList* createCommandList(ECommandQueueType Type) override;
 	RSwapchain* createSwapchain(const RSwapchainDescriptor& Descriptor) override;
 	RFence* createFence() override;
-
+	
 	void submitCommandLists(ECommandQueueType Type, const QueueSubmitDescriptor& Descriptor) override;
 	void waitIdle() override;
 	void destroyResource(RResource* Resource) override;
@@ -59,7 +60,6 @@ public:
 	VkSurfaceKHR createSurface(void* NativeWindowHandle) const;
 
 public:
-	void createStagingBuffer(VkBuffer& OutBuffer, VkDeviceMemory& OutMemory, VkDeviceSize Size);
 	VkCommandBuffer beginImmediateCommand();
 	void endImmediateCommand(VkCommandBuffer CommandBuffer);
 private:
@@ -80,6 +80,7 @@ private:
 
 	VkQueue CopyQueue = VK_NULL_HANDLE;
 	uint32_t CopyQueueFamilyIndex = UINT32_MAX;
+	VkCommandPool ImmediateCommandPool = VK_NULL_HANDLE;
 
 	VkDebugUtilsMessengerEXT DebugMessenger = VK_NULL_HANDLE;
 	bool EnableValidation = true;
