@@ -11,67 +11,6 @@
 namespace render::rhi
 {
 
-inline VkImageAspectFlags toVkImageAspectMask(ETextureAspect Aspect, EFormat TextureFormat)
-{
-	switch (Aspect)
-	{
-	case ETextureAspect::Color:
-		return VK_IMAGE_ASPECT_COLOR_BIT;
-	case ETextureAspect::Depth:
-		return VK_IMAGE_ASPECT_DEPTH_BIT;
-	case ETextureAspect::Stencil:
-		return VK_IMAGE_ASPECT_STENCIL_BIT;
-	case ETextureAspect::DepthStencil:
-		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-	case ETextureAspect::Auto:
-	default:
-		if (isDepthStencilFormat(TextureFormat))
-		{
-			if (isDepthOnlyFormat(TextureFormat))
-			{
-				return VK_IMAGE_ASPECT_DEPTH_BIT;
-			}
-			if (isStencilOnlyFormat(TextureFormat))
-			{
-				return VK_IMAGE_ASPECT_STENCIL_BIT;
-			}
-			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-		return VK_IMAGE_ASPECT_COLOR_BIT;
-	}
-}
-
-inline VkImageAspectFlags toVkImageAspectMask(const RTextureViewDescriptor& ViewDescriptor, EFormat TextureFormat)
-{
-	if (ViewDescriptor.Aspect != ETextureAspect::Auto)
-	{
-		return toVkImageAspectMask(ViewDescriptor.Aspect, TextureFormat);
-	}
-
-	switch (ViewDescriptor.Type)
-	{
-	case RTextureViewDescriptor::EViewType::DSV:
-		if (isDepthOnlyFormat(TextureFormat))
-		{
-			return VK_IMAGE_ASPECT_DEPTH_BIT;
-		}
-		if (isStencilOnlyFormat(TextureFormat))
-		{
-			return VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-		if (isDepthStencilFormat(TextureFormat))
-		{
-			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-		return 0;
-	case RTextureViewDescriptor::EViewType::UAV:
-	case RTextureViewDescriptor::EViewType::SRV:
-	case RTextureViewDescriptor::EViewType::RTV:
-	default:
-		return toVkImageAspectMask(ETextureAspect::Auto, TextureFormat);
-	}
-}
-
 class VulkanDevice;
 
 enum class EVulkanImageOwnership : uint8_t
@@ -90,36 +29,6 @@ struct VulkanImageResource
 	bool isValid() const noexcept { return Image != VK_NULL_HANDLE; }
 	bool ownsImage() const noexcept { return Ownership == EVulkanImageOwnership::Owned; }
 	bool ownsMemory() const noexcept { return Ownership == EVulkanImageOwnership::Owned && Memory != VK_NULL_HANDLE; }
-};
-
-class VulkanBuffer : public RBuffer
-{
-public:
-	VulkanBuffer(VulkanDevice* InDevice, const RBufferDescriptor& InBufferDesc);
-	~VulkanBuffer() override;
-
-	bool isValid() const override;
-	uint64_t getSize() const override;
-	bool updateData(uint64_t Offset, const void* Data, uint64_t Size) override;
-	void* mapRange(EBufferMapMode MapMode, uint64_t Offset = 0, uint64_t Size = 0) override;
-	void unmap() override;
-	bool flushMappedRange(uint64_t Offset = 0, uint64_t Size = 0) override;
-	bool invalidateMappedRange(uint64_t Offset = 0, uint64_t Size = 0) override;
-	bool isCpuAccessible() const override;
-
-	VkBuffer getVkBuffer() const noexcept { return Buffer; }
-	VkDeviceMemory getVkDeviceMemory() const noexcept { return Memory; }
-
-private:
-	void setDebugName(const std::string& Name) override;
-
-	VulkanDevice* Device = nullptr;
-	RBufferDescriptor BufferDesc{};
-	VkBuffer Buffer = VK_NULL_HANDLE;
-	VkDeviceMemory Memory = VK_NULL_HANDLE;
-	void* MappedPtr = nullptr;
-	uint64_t MappedOffset = 0;
-	uint64_t MappedSize = 0;
 };
 
 class VulkanTextureView;

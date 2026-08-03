@@ -7,6 +7,7 @@
 #include "VulkanResources.h"
 #include "VulkanShader.h"
 #include "VulkanSwapchain.h"
+#include "VulkanBuffer.h"
 
 #include <algorithm>
 #include <array>

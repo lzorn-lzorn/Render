@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../Definitions.h"
-
+#include "VulkanDevice.h"
 #include <vulkan/vulkan.h>
 
 namespace render::rhi
@@ -25,6 +25,18 @@ VkPipelineStageFlags toVkPipelineStage(EResourceState);
 VkAccessFlags toVkAccessMask(EResourceState);
 VkSharingMode toVkSharingMode(ESharingMode);
 VkMemoryPropertyFlags toVkMemoryPropertyFlags(EMemoryProperty);
+VkImageAspectFlags toVkImageAspectMask(ETextureAspect Aspect, EFormat TextureFormat);
+VkImageAspectFlags toVkImageAspectMask(const RTextureViewDescriptor& ViewDescriptor, EFormat TextureFormat);
+uint64_t clampCopySize(uint64_t Offset, uint64_t RequestedSize, uint64_t MaxSize);
+
+bool buildMappedMemoryRange(
+	VulkanDevice* Device,
+	VkDeviceMemory Memory,
+	uint64_t BufferSize,
+	uint64_t Offset,
+	uint64_t Size,
+	VkMappedMemoryRange& OutRange);
+
 bool isDepthFormat(EFormat);
 
 } // namespace render::rhi

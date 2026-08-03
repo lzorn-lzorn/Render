@@ -1,5 +1,6 @@
 #include "VulkanResources.h"
 #include "VulkanDevice.h"
+#include "VulkanBuffer.h"
 
 #include <algorithm>
 #include <cstring>

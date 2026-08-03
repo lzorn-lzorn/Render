@@ -3,6 +3,7 @@ find_package(Vulkan REQUIRED)
 target_sources(${LibarayName} PRIVATE
 	VulkanDevice.cpp
 	VulkanRHI.cpp
+	VulkanBuffer.cpp
 	VulkanResources.cpp
 	VulkanFence.cpp
 	VulkanPipeline.cpp

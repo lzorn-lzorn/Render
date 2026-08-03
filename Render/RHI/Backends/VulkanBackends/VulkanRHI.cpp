@@ -296,6 +296,124 @@ VkMemoryPropertyFlags toVkMemoryPropertyFlags(EMemoryProperty Properties)
 
     return Flags;
 }
+
+VkImageAspectFlags toVkImageAspectMask(const RTextureViewDescriptor& ViewDescriptor, EFormat TextureFormat)
+{
+	if (ViewDescriptor.Aspect != ETextureAspect::Auto)
+	{
+		return toVkImageAspectMask(ViewDescriptor.Aspect, TextureFormat);
+	}
+
+	switch (ViewDescriptor.Type)
+	{
+	case RTextureViewDescriptor::EViewType::DSV:
+		if (isDepthOnlyFormat(TextureFormat))
+		{
+			return VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+		if (isStencilOnlyFormat(TextureFormat))
+		{
+			return VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		if (isDepthStencilFormat(TextureFormat))
+		{
+			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		return 0;
+	case RTextureViewDescriptor::EViewType::UAV:
+	case RTextureViewDescriptor::EViewType::SRV:
+	case RTextureViewDescriptor::EViewType::RTV:
+	default:
+		return toVkImageAspectMask(ETextureAspect::Auto, TextureFormat);
+	}
+}
+
+
+VkImageAspectFlags toVkImageAspectMask(ETextureAspect Aspect, EFormat TextureFormat)
+{
+	switch (Aspect)
+	{
+	case ETextureAspect::Color:
+		return VK_IMAGE_ASPECT_COLOR_BIT;
+	case ETextureAspect::Depth:
+		return VK_IMAGE_ASPECT_DEPTH_BIT;
+	case ETextureAspect::Stencil:
+		return VK_IMAGE_ASPECT_STENCIL_BIT;
+	case ETextureAspect::DepthStencil:
+		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	case ETextureAspect::Auto:
+	default:
+		if (isDepthStencilFormat(TextureFormat))
+		{
+			if (isDepthOnlyFormat(TextureFormat))
+			{
+				return VK_IMAGE_ASPECT_DEPTH_BIT;
+			}
+			if (isStencilOnlyFormat(TextureFormat))
+			{
+				return VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		return VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+}
+
+uint64_t clampCopySize(uint64_t Offset, uint64_t RequestedSize, uint64_t MaxSize)
+{
+	if (Offset >= MaxSize)
+	{
+		return 0;
+	}
+
+	const uint64_t available_size = MaxSize - Offset;
+	if (RequestedSize == 0)
+	{
+		return available_size;
+	}
+	return std::min<uint64_t>(RequestedSize, available_size);
+}
+
+
+bool buildMappedMemoryRange(
+	VulkanDevice* Device,
+	VkDeviceMemory Memory,
+	uint64_t BufferSize,
+	uint64_t Offset,
+	uint64_t Size,
+	VkMappedMemoryRange& OutRange)
+{
+	if (!Device || Memory == VK_NULL_HANDLE)
+	{
+		return false;
+	}
+
+	const uint64_t range_size = clampCopySize(Offset, Size, BufferSize);
+	if (range_size == 0)
+	{
+		return false;
+	}
+
+	VkPhysicalDeviceProperties properties{};
+	vkGetPhysicalDeviceProperties(Device->getVkPhysicalDevice(), &properties);
+
+	const uint64_t atom_size = std::max<uint64_t>(1, properties.limits.nonCoherentAtomSize);
+	const uint64_t aligned_offset = Offset - (Offset % atom_size);
+	const uint64_t aligned_end = Align<uint64_t>(Offset + range_size, atom_size);
+	const uint64_t clamped_end = std::min<uint64_t>(aligned_end, BufferSize);
+	if (clamped_end <= aligned_offset)
+	{
+		return false;
+	}
+
+	OutRange = {};
+	OutRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+	OutRange.memory = Memory;
+	OutRange.offset = static_cast<VkDeviceSize>(aligned_offset);
+	OutRange.size = static_cast<VkDeviceSize>(clamped_end - aligned_offset);
+	return true;
+}
+
 std::unique_ptr<RDevice> CreateVulkanDevice()
 {
 	auto device = std::make_unique<VulkanDevice>();
@@ -329,4 +447,5 @@ std::unique_ptr<RDevice> CreateDevice(const char* APIName)
 	}
 	return nullptr;
 }
+
 } // namespace render::rhi
