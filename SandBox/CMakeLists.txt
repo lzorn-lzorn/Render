@@ -23,10 +23,11 @@ endif()
 add_executable(SandBox main.cpp)
 
 target_link_libraries(SandBox PRIVATE Renderer)
-if (NOT TARGET DXC::Compiler)
-    message(FATAL_ERROR "DXC::Compiler target not found. Ensure top-level CMake config sets up dxcompiler first.")
+if (TARGET DXC::Compiler)
+    target_link_libraries(SandBox PRIVATE DXC::Compiler)
+else()
+    message(STATUS "DXC::Compiler target not found, skipping DXC runtime link for this platform.")
 endif()
-target_link_libraries(SandBox PRIVATE DXC::Compiler)
 
 target_include_directories(SandBox PRIVATE
     ${CMAKE_SOURCE_DIR}/glm

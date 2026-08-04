@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.16)
-project(SandBoxProject LANGUAGES CXX)
+
+if (APPLE)
+	set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE FILEPATH "C compiler" FORCE)
+	set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE FILEPATH "CXX compiler" FORCE)
+	set(CMAKE_OBJC_COMPILER "/usr/bin/clang" CACHE FILEPATH "Objective-C compiler" FORCE)
+	set(CMAKE_OBJCXX_COMPILER "/usr/bin/clang++" CACHE FILEPATH "Objective-CXX compiler" FORCE)
+	project(SandBoxProject LANGUAGES C CXX OBJC OBJCXX)
+else()
+	project(SandBoxProject LANGUAGES CXX)
+endif()
 
 # 全局 C++23 标准
 set(CMAKE_CXX_STANDARD 23)

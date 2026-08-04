@@ -1,35 +1,19 @@
 #pragma once
 
 #include "../../Definitions.h"
+#include "VulkanImage.h"
 #include "VulkanRHI.h"
 
 #include <vulkan/vulkan.h>
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace render::rhi
 {
 
 class VulkanDevice;
-
-enum class EVulkanImageOwnership : uint8_t
-{
-	Owned,
-	External
-};
-
-struct VulkanImageResource
-{
-	VkImage Image = VK_NULL_HANDLE;
-	VkDeviceMemory Memory = VK_NULL_HANDLE;
-	VkImageLayout Layout = VK_IMAGE_LAYOUT_UNDEFINED;
-	EVulkanImageOwnership Ownership = EVulkanImageOwnership::Owned;
-
-	bool isValid() const noexcept { return Image != VK_NULL_HANDLE; }
-	bool ownsImage() const noexcept { return Ownership == EVulkanImageOwnership::Owned; }
-	bool ownsMemory() const noexcept { return Ownership == EVulkanImageOwnership::Owned && Memory != VK_NULL_HANDLE; }
-};
 
 class VulkanTextureView;
 
@@ -55,14 +39,12 @@ public:
 	RTextureView* createView(const RTextureViewDescriptor& Descriptor) override;
 	RTextureView* getDefaultView() const noexcept { return DefaultView; }
 
-	VkImage getVkImage() const noexcept { return ImageResource.Image; }
+	VkImage getVkImage() const noexcept;
 	VkImageAspectFlags getAspectMask() const noexcept;
-	VkImageLayout getVkImageLayout() const noexcept { return ImageResource.Layout; }
+	VkImageLayout getVkImageLayout() const noexcept;
 	VulkanDevice* getDevice() const noexcept { return Device; }
 
 private:
-	bool initializeImage();
-	bool allocateImageMemory();
 	bool uploadBulkData(const RTextureBulkData& InBulkData);
 	bool transitionImageLayout(
 		VkCommandBuffer CommandBuffer,
@@ -82,7 +64,7 @@ private:
 
 	VulkanDevice* Device = nullptr;
 	RTextureDescriptor TextureDesc{};
-	VulkanImageResource ImageResource{};
+	std::unique_ptr<VulkanImage> Image;
 	RTextureView* DefaultView = nullptr;
 	std::vector<RTextureView*> Views;
 };

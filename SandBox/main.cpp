@@ -13,8 +13,13 @@
 #include <unknwn.h>
 #endif
 
+#if __has_include(<dxc/dxcapi.h>) && __has_include(<wrl/client.h>)
+#define RENDER_HAS_DXC 1
 #include <dxc/dxcapi.h>
 #include <wrl/client.h>
+#else
+#define RENDER_HAS_DXC 0
+#endif
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -23,11 +28,14 @@
 #include "RHI/Definitions.h"
 
 #include <cstddef>
+#include <cstdlib>
 #include <cstdint>
 #include <cstring>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <algorithm>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -36,7 +44,9 @@
 #include <utility>
 #include <vector>
 
+#if RENDER_HAS_DXC
 using Microsoft::WRL::ComPtr;
+#endif
 
 namespace
 {
@@ -95,6 +105,152 @@ std::string LoadTextFile(const std::filesystem::path& filePath)
     std::ostringstream stream;
     stream << file.rdbuf();
     return stream.str();
+}
+
+std::vector<std::byte> LoadBinaryFile(const std::filesystem::path& filePath)
+{
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    if (!file)
+    {
+        throw std::runtime_error("Failed to open file: " + filePath.string());
+    }
+
+    const std::streamsize size = file.tellg();
+    if (size < 0)
+    {
+        throw std::runtime_error("Failed to query file size: " + filePath.string());
+    }
+
+    std::vector<std::byte> bytes(static_cast<std::size_t>(size));
+    file.seekg(0, std::ios::beg);
+    if (!bytes.empty() && !file.read(reinterpret_cast<char*>(bytes.data()), size))
+    {
+        throw std::runtime_error("Failed to read file: " + filePath.string());
+    }
+
+    return bytes;
+}
+
+std::string QuoteShellArg(const std::string& input)
+{
+    std::string escaped;
+    escaped.reserve(input.size() + 2u);
+    escaped.push_back('\'');
+    for (const char ch : input)
+    {
+        if (ch == '\'')
+        {
+            escaped += "'\\''";
+        }
+        else
+        {
+            escaped.push_back(ch);
+        }
+    }
+    escaped.push_back('\'');
+    return escaped;
+}
+
+std::optional<std::filesystem::path> FindExecutable(const std::string& name)
+{
+    auto probePath = [&](const std::filesystem::path& candidate) -> std::optional<std::filesystem::path>
+    {
+        std::error_code ec;
+        if (std::filesystem::exists(candidate, ec) && std::filesystem::is_regular_file(candidate, ec))
+        {
+            return std::filesystem::absolute(candidate, ec);
+        }
+        return std::nullopt;
+    };
+
+    const char* pathEnv = std::getenv("PATH");
+    if (pathEnv)
+    {
+        std::istringstream pathStream(pathEnv);
+        std::string directory;
+        while (std::getline(pathStream, directory, ':'))
+        {
+            if (directory.empty())
+            {
+                continue;
+            }
+
+            const auto candidate = probePath(std::filesystem::path(directory) / name);
+            if (candidate.has_value())
+            {
+                return candidate;
+            }
+        }
+    }
+
+    const char* vulkanSdk = std::getenv("VULKAN_SDK");
+    if (vulkanSdk)
+    {
+        const std::filesystem::path sdkPath(vulkanSdk);
+        const std::vector<std::filesystem::path> sdkBins = {
+            sdkPath / "bin",
+            sdkPath / "Bin",
+            sdkPath / "macOS" / "bin"
+        };
+
+        for (const std::filesystem::path& bin : sdkBins)
+        {
+            const auto candidate = probePath(bin / name);
+            if (candidate.has_value())
+            {
+                return candidate;
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::vector<std::byte> CompileHlslToSpirvWithDxcCli(
+    const std::filesystem::path& filePath,
+    const wchar_t* entryPoint,
+    const wchar_t* targetProfile)
+{
+    const std::optional<std::filesystem::path> dxcPath = FindExecutable("dxc");
+    if (!dxcPath.has_value())
+    {
+        throw std::runtime_error(
+            "DXC executable was not found. Install Vulkan SDK or add dxc to PATH.");
+    }
+
+    const std::string entryPointUtf8(entryPoint, entryPoint + std::wcslen(entryPoint));
+    const std::string targetProfileUtf8(targetProfile, targetProfile + std::wcslen(targetProfile));
+
+    std::error_code ec;
+    const auto now = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    const std::filesystem::path outputPath =
+        std::filesystem::temp_directory_path(ec) /
+        ("render_sandbox_" + std::to_string(static_cast<long long>(now)) + ".spv");
+    if (ec)
+    {
+        throw std::runtime_error("Failed to query temp directory");
+    }
+
+    const std::string command =
+        QuoteShellArg(dxcPath->string()) +
+        " -spirv -fspv-target-env=vulkan1.3 -fvk-use-dx-layout" +
+        " -E " + QuoteShellArg(entryPointUtf8) +
+        " -T " + QuoteShellArg(targetProfileUtf8) +
+        " -Fo " + QuoteShellArg(outputPath.string()) +
+        " " + QuoteShellArg(filePath.string());
+
+    const int result = std::system(command.c_str());
+    if (result != 0)
+    {
+        std::error_code removeEc;
+        std::filesystem::remove(outputPath, removeEc);
+        throw std::runtime_error("DXC CLI compile failed for: " + filePath.string());
+    }
+
+    std::vector<std::byte> bytes = LoadBinaryFile(outputPath);
+    std::error_code removeEc;
+    std::filesystem::remove(outputPath, removeEc);
+    return bytes;
 }
 
 struct VertexKey
@@ -308,6 +464,7 @@ std::vector<std::byte> CompileHlslToSpirv(
     const wchar_t* entryPoint,
     const wchar_t* targetProfile)
 {
+#if RENDER_HAS_DXC
     ComPtr<IDxcUtils> utils;
     ComPtr<IDxcCompiler3> compiler;
     ComPtr<IDxcIncludeHandler> includeHandler;
@@ -375,6 +532,9 @@ std::vector<std::byte> CompileHlslToSpirv(
     std::vector<std::byte> bytes(spirvObject->GetBufferSize());
     std::memcpy(bytes.data(), spirvObject->GetBufferPointer(), spirvObject->GetBufferSize());
     return bytes;
+#else
+    return CompileHlslToSpirvWithDxcCli(filePath, entryPoint, targetProfile);
+#endif
 }
 
 void* GetNativeWindowHandle(SDL_Window* window)

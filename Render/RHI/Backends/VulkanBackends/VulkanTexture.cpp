@@ -12,21 +12,59 @@ namespace render::rhi
 namespace
 {
 
-VkImageType toVkImageType(ETextureDimension Dimension)
+void normalizeTextureDescriptor(RTextureDescriptor& TextureDesc)
 {
-	switch (Dimension)
+	TextureDesc.Width = std::max(1u, TextureDesc.Width);
+	TextureDesc.Height = std::max(1u, TextureDesc.Height);
+	TextureDesc.Depth = std::max(1u, TextureDesc.Depth);
+	TextureDesc.MipLevels = std::max(1u, TextureDesc.MipLevels);
+	TextureDesc.ArrayLayers = std::max(1u, TextureDesc.ArrayLayers);
+
+	switch (TextureDesc.Dimension)
 	{
 	case ETextureDimension::Texture1D:
+		TextureDesc.Height = 1;
+		TextureDesc.Depth = 1;
+		TextureDesc.ArrayLayers = 1;
+		break;
 	case ETextureDimension::Texture1DArray:
-		return VK_IMAGE_TYPE_1D;
+		TextureDesc.Height = 1;
+		TextureDesc.Depth = 1;
+		break;
 	case ETextureDimension::Texture3D:
-		return VK_IMAGE_TYPE_3D;
-	case ETextureDimension::Texture2D:
-	case ETextureDimension::Texture2DArray:
+		TextureDesc.ArrayLayers = 1;
+		break;
 	case ETextureDimension::Cube:
+		TextureDesc.Depth = 1;
+		TextureDesc.ArrayLayers = 6;
+		break;
 	case ETextureDimension::CubeArray:
+		TextureDesc.Depth = 1;
+		if (TextureDesc.ArrayLayers < 6)
+		{
+			TextureDesc.ArrayLayers = 6;
+		}
+		if ((TextureDesc.ArrayLayers % 6) != 0)
+		{
+			TextureDesc.ArrayLayers = Align<uint32_t>(TextureDesc.ArrayLayers, 6);
+		}
+		break;
+	case ETextureDimension::Texture2D:
+		TextureDesc.Depth = 1;
+		TextureDesc.ArrayLayers = 1;
+		break;
+	case ETextureDimension::Texture2DArray:
+		TextureDesc.Depth = 1;
+		break;
 	default:
-		return VK_IMAGE_TYPE_2D;
+		break;
+	}
+
+	if (TextureDesc.Usage == ETextureUsage::None)
+	{
+		TextureDesc.Usage = isDepthFormat(TextureDesc.Format)
+			? ETextureUsage::DepthStencil
+			: ETextureUsage::Sampled;
 	}
 }
 
@@ -168,7 +206,9 @@ VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& I
 		return;
 	}
 
-	if (!initializeImage() || !allocateImageMemory())
+	normalizeTextureDescriptor(TextureDesc);
+	Image = std::make_unique<VulkanImage>(Device, TextureDesc);
+	if (!Image || !Image->isValid())
 	{
 		return;
 	}
@@ -189,7 +229,9 @@ VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& I
 		return;
 	}
 
-	if (!initializeImage() || !allocateImageMemory())
+	normalizeTextureDescriptor(TextureDesc);
+	Image = std::make_unique<VulkanImage>(Device, TextureDesc);
+	if (!Image || !Image->isValid())
 	{
 		return;
 	}
@@ -211,12 +253,11 @@ VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& I
 	: Device(InDevice)
 	, TextureDesc(InTextureDesc)
 {
-	ImageResource.Image = InExternalImage;
-	ImageResource.Memory = VK_NULL_HANDLE;
-	ImageResource.Layout = hasAnyFlags(TextureDesc.Usage, ETextureUsage::Present)
+	normalizeTextureDescriptor(TextureDesc);
+	const VkImageLayout initial_layout = hasAnyFlags(TextureDesc.Usage, ETextureUsage::Present)
 		? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 		: VK_IMAGE_LAYOUT_UNDEFINED;
-	ImageResource.Ownership = EVulkanImageOwnership::External;
+	Image = std::make_unique<VulkanImage>(Device, InExternalImage, initial_layout);
 
 	RTextureViewDescriptor default_descriptor = buildDefaultViewDescriptor();
 	DefaultView = new VulkanTextureView(this, default_descriptor, InExternalView, true);
@@ -232,33 +273,12 @@ VulkanTexture::~VulkanTexture()
 	Views.clear();
 	DefaultView = nullptr;
 
-	if (!Device)
-	{
-		return;
-	}
-
-	VkDevice vk_device = Device->getVkDevice();
-	if (vk_device == VK_NULL_HANDLE)
-	{
-		return;
-	}
-
-	if (ImageResource.ownsImage() && ImageResource.Image != VK_NULL_HANDLE)
-	{
-		vkDestroyImage(vk_device, ImageResource.Image, nullptr);
-		ImageResource.Image = VK_NULL_HANDLE;
-	}
-
-	if (ImageResource.ownsMemory() && ImageResource.Memory != VK_NULL_HANDLE)
-	{
-		vkFreeMemory(vk_device, ImageResource.Memory, nullptr);
-		ImageResource.Memory = VK_NULL_HANDLE;
-	}
+	Image.reset();
 }
 
 bool VulkanTexture::isValid() const
 {
-	return ImageResource.isValid();
+	return Image && Image->isValid();
 }
 
 void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void* SrcData, uint32_t SrcRowPitch, uint32_t SrcDepthPitch)
@@ -328,7 +348,7 @@ void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void
 	staging_buffer->flushMappedRange(0, upload_size);
 	staging_buffer->unmap();
 
-	const VkImageLayout previous_layout = ImageResource.Layout;
+	const VkImageLayout previous_layout = Image->getLayout();
 	VkCommandBuffer command_buffer = Device->beginImmediateCommand();
 	transitionImageLayout(
 		command_buffer,
@@ -356,7 +376,7 @@ void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void
 	vkCmdCopyBufferToImage(
 		command_buffer,
 		staging_buffer->getVkBuffer(),
-		ImageResource.Image,
+		Image->getVkImage(),
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		1,
 		&copy_region);
@@ -402,7 +422,7 @@ void VulkanTexture::generateMipmaps()
 	const VkPipelineStageFlags final_stage = getPipelineStageForLayout(final_layout);
 	const VkAccessFlags final_access = getAccessMaskForLayout(final_layout);
 
-	const VkImageLayout previous_layout = ImageResource.Layout;
+	const VkImageLayout previous_layout = Image->getLayout();
 	VkCommandBuffer command_buffer = Device->beginImmediateCommand();
 	transitionImageLayout(
 		command_buffer,
@@ -425,7 +445,7 @@ void VulkanTexture::generateMipmaps()
 			to_src_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			to_src_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			to_src_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			to_src_barrier.image = ImageResource.Image;
+			to_src_barrier.image = Image->getVkImage();
 			to_src_barrier.subresourceRange.aspectMask = aspect_mask;
 			to_src_barrier.subresourceRange.baseMipLevel = mip - 1;
 			to_src_barrier.subresourceRange.levelCount = 1;
@@ -471,9 +491,9 @@ void VulkanTexture::generateMipmaps()
 
 			vkCmdBlitImage(
 				command_buffer,
-				ImageResource.Image,
+				Image->getVkImage(),
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				ImageResource.Image,
+				Image->getVkImage(),
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				1,
 				&blit,
@@ -489,7 +509,7 @@ void VulkanTexture::generateMipmaps()
 				to_final_barrier.dstAccessMask = final_access;
 				to_final_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				to_final_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				to_final_barrier.image = ImageResource.Image;
+				to_final_barrier.image = Image->getVkImage();
 				to_final_barrier.subresourceRange.aspectMask = aspect_mask;
 				to_final_barrier.subresourceRange.baseMipLevel = mip - 1;
 				to_final_barrier.subresourceRange.levelCount = 1;
@@ -520,7 +540,7 @@ void VulkanTexture::generateMipmaps()
 			last_level_barrier.dstAccessMask = final_access;
 			last_level_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			last_level_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			last_level_barrier.image = ImageResource.Image;
+			last_level_barrier.image = Image->getVkImage();
 			last_level_barrier.subresourceRange.aspectMask = aspect_mask;
 			last_level_barrier.subresourceRange.baseMipLevel = TextureDesc.MipLevels - 1;
 			last_level_barrier.subresourceRange.levelCount = 1;
@@ -543,11 +563,11 @@ void VulkanTexture::generateMipmaps()
 
 	if (final_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 	{
-		ImageResource.Layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		Image->setLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	}
 	else
 	{
-		ImageResource.Layout = final_layout;
+		Image->setLayout(final_layout);
 	}
 
 	Device->endImmediateCommand(command_buffer);
@@ -617,7 +637,7 @@ RTextureView* VulkanTexture::createView(const RTextureViewDescriptor& Descriptor
 
 	VkImageViewCreateInfo view_info{};
 	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	view_info.image = ImageResource.Image;
+	view_info.image = Image->getVkImage();
 	view_info.viewType = toVkImageViewType(resolved_descriptor.Dimension);
 	view_info.format = toVkFormat(resolved_descriptor.Format);
 	view_info.subresourceRange.aspectMask = toVkImageAspectMask(resolved_descriptor, resolved_descriptor.Format);
@@ -648,149 +668,6 @@ RTextureView* VulkanTexture::createView(const RTextureViewDescriptor& Descriptor
 VkImageAspectFlags VulkanTexture::getAspectMask() const noexcept
 {
 	return toVkImageAspectMask(ETextureAspect::Auto, TextureDesc.Format);
-}
-
-bool VulkanTexture::initializeImage()
-{
-	if (!Device || !Device->isValid())
-	{
-		return false;
-	}
-
-	TextureDesc.Width = std::max(1u, TextureDesc.Width);
-	TextureDesc.Height = std::max(1u, TextureDesc.Height);
-	TextureDesc.Depth = std::max(1u, TextureDesc.Depth);
-	TextureDesc.MipLevels = std::max(1u, TextureDesc.MipLevels);
-	TextureDesc.ArrayLayers = std::max(1u, TextureDesc.ArrayLayers);
-
-	switch (TextureDesc.Dimension)
-	{
-	case ETextureDimension::Texture1D:
-		TextureDesc.Height = 1;
-		TextureDesc.Depth = 1;
-		TextureDesc.ArrayLayers = 1;
-		break;
-	case ETextureDimension::Texture1DArray:
-		TextureDesc.Height = 1;
-		TextureDesc.Depth = 1;
-		break;
-	case ETextureDimension::Texture3D:
-		TextureDesc.ArrayLayers = 1;
-		break;
-	case ETextureDimension::Cube:
-		TextureDesc.Depth = 1;
-		TextureDesc.ArrayLayers = 6;
-		break;
-	case ETextureDimension::CubeArray:
-		TextureDesc.Depth = 1;
-		if (TextureDesc.ArrayLayers < 6)
-		{
-			TextureDesc.ArrayLayers = 6;
-		}
-		if ((TextureDesc.ArrayLayers % 6) != 0)
-		{
-			TextureDesc.ArrayLayers = Align<uint32_t>(TextureDesc.ArrayLayers, 6);
-		}
-		break;
-	case ETextureDimension::Texture2D:
-		TextureDesc.Depth = 1;
-		TextureDesc.ArrayLayers = 1;
-		break;
-	case ETextureDimension::Texture2DArray:
-		TextureDesc.Depth = 1;
-		break;
-	default:
-		break;
-	}
-
-	if (TextureDesc.Usage == ETextureUsage::None)
-	{
-		TextureDesc.Usage = isDepthFormat(TextureDesc.Format)
-			? ETextureUsage::DepthStencil
-			: ETextureUsage::Sampled;
-	}
-
-	VkImageUsageFlags usage_flags = toVkImageUsage(TextureDesc.Usage);
-	usage_flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	if (TextureDesc.MipLevels > 1 || TextureDesc.ShouldGenerateMipmaps || hasAnyFlags(TextureDesc.Usage, ETextureUsage::TransferSrc))
-	{
-		usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-	}
-
-	VkImageCreateInfo image_info{};
-	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	image_info.flags = 0;
-	image_info.imageType = toVkImageType(TextureDesc.Dimension);
-	if (TextureDesc.Dimension == ETextureDimension::Cube || TextureDesc.Dimension == ETextureDimension::CubeArray)
-	{
-		image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-	}
-	image_info.format = toVkFormat(TextureDesc.Format);
-	image_info.extent = { TextureDesc.Width, TextureDesc.Height, TextureDesc.Depth };
-	image_info.mipLevels = TextureDesc.MipLevels;
-	image_info.arrayLayers = TextureDesc.ArrayLayers;
-	image_info.samples = toVkSampleCount(TextureDesc.SampleCount);
-	if (TextureDesc.Dimension == ETextureDimension::Texture3D)
-	{
-		image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-	}
-	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-	image_info.usage = usage_flags;
-	image_info.sharingMode = toVkSharingMode(TextureDesc.SharingMode);
-	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-	if (vkCreateImage(Device->getVkDevice(), &image_info, nullptr, &ImageResource.Image) != VK_SUCCESS)
-	{
-		ImageResource.Image = VK_NULL_HANDLE;
-		return false;
-	}
-
-	ImageResource.Layout = VK_IMAGE_LAYOUT_UNDEFINED;
-	ImageResource.Ownership = EVulkanImageOwnership::Owned;
-	return true;
-}
-
-bool VulkanTexture::allocateImageMemory()
-{
-	if (!Device || ImageResource.Image == VK_NULL_HANDLE)
-	{
-		return false;
-	}
-
-	VkMemoryRequirements memory_requirements{};
-	vkGetImageMemoryRequirements(Device->getVkDevice(), ImageResource.Image, &memory_requirements);
-
-	const uint32_t memory_type = Device->findMemoryType(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	if (memory_type == UINT32_MAX)
-	{
-		vkDestroyImage(Device->getVkDevice(), ImageResource.Image, nullptr);
-		ImageResource.Image = VK_NULL_HANDLE;
-		return false;
-	}
-
-	VkMemoryAllocateInfo allocate_info{};
-	allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocate_info.allocationSize = memory_requirements.size;
-	allocate_info.memoryTypeIndex = memory_type;
-
-	if (vkAllocateMemory(Device->getVkDevice(), &allocate_info, nullptr, &ImageResource.Memory) != VK_SUCCESS)
-	{
-		vkDestroyImage(Device->getVkDevice(), ImageResource.Image, nullptr);
-		ImageResource.Image = VK_NULL_HANDLE;
-		ImageResource.Memory = VK_NULL_HANDLE;
-		return false;
-	}
-
-	if (vkBindImageMemory(Device->getVkDevice(), ImageResource.Image, ImageResource.Memory, 0) != VK_SUCCESS)
-	{
-		vkFreeMemory(Device->getVkDevice(), ImageResource.Memory, nullptr);
-		vkDestroyImage(Device->getVkDevice(), ImageResource.Image, nullptr);
-		ImageResource.Image = VK_NULL_HANDLE;
-		ImageResource.Memory = VK_NULL_HANDLE;
-		return false;
-	}
-
-	return true;
 }
 
 bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
@@ -905,15 +782,15 @@ bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
 	transitionImageLayout(
 		command_buffer,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		getPipelineStageForLayout(ImageResource.Layout),
+		getPipelineStageForLayout(Image->getLayout()),
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		getAccessMaskForLayout(ImageResource.Layout),
+		getAccessMaskForLayout(Image->getLayout()),
 		VK_ACCESS_TRANSFER_WRITE_BIT);
 
 	vkCmdCopyBufferToImage(
 		command_buffer,
 		staging_buffer->getVkBuffer(),
-		ImageResource.Image,
+		Image->getVkImage(),
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		static_cast<uint32_t>(copy_regions.size()),
 		copy_regions.data());
@@ -947,12 +824,12 @@ bool VulkanTexture::transitionImageLayout(
 	{
 		return false;
 	}
-	if (ImageResource.Layout == NewLayout)
+	if (Image->getLayout() == NewLayout)
 	{
 		return true;
 	}
 
-	const VkImageLayout old_layout = ImageResource.Layout;
+	const VkImageLayout old_layout = Image->getLayout();
 	VkImageSubresourceRange range = SubresourceRange
 		? *SubresourceRange
 		: buildSubresourceRange(0, TextureDesc.MipLevels, 0, TextureDesc.ArrayLayers);
@@ -965,7 +842,7 @@ bool VulkanTexture::transitionImageLayout(
 	barrier.dstAccessMask = DstAccess;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.image = ImageResource.Image;
+	barrier.image = Image->getVkImage();
 	barrier.subresourceRange = range;
 
 	vkCmdPipelineBarrier(
@@ -980,8 +857,18 @@ bool VulkanTexture::transitionImageLayout(
 		1,
 		&barrier);
 
-	ImageResource.Layout = NewLayout;
+	Image->setLayout(NewLayout);
 	return true;
+}
+
+VkImage VulkanTexture::getVkImage() const noexcept
+{
+	return Image ? Image->getVkImage() : VK_NULL_HANDLE;
+}
+
+VkImageLayout VulkanTexture::getVkImageLayout() const noexcept
+{
+	return Image ? Image->getLayout() : VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 VkImageSubresourceRange VulkanTexture::buildSubresourceRange(

@@ -6,3 +6,5 @@ Build
 cmake-release-build
 cmake-debug-build
 
+compile_commands.json
+
