@@ -98,7 +98,7 @@ VulkanSwapchain::~VulkanSwapchain()
 	}
 }
 
-RTexture* VulkanSwapchain::acquireNextTexture()
+RImage* VulkanSwapchain::acquireNextTexture()
 {
 	if (!Device || Swapchain == VK_NULL_HANDLE || Textures.empty())
 	{
@@ -283,8 +283,8 @@ bool VulkanSwapchain::createSwapchain(VkSwapchainKHR OldSwapchain)
 	Images.resize(swapchain_image_count);
 	vkGetSwapchainImagesKHR(vk_device, Swapchain, &swapchain_image_count, Images.data());
 
-	RTextureDescriptor texture_descriptor{};
-	texture_descriptor.Usage = ETextureUsage::Target | ETextureUsage::Present;
+	RImageDescriptor texture_descriptor{};
+	texture_descriptor.Usage = EImageUsage::Target | EImageUsage::Present;
 	texture_descriptor.Format = ToRhiFormat(selectedFormat.format);
 	texture_descriptor.Width = extent.width;
 	texture_descriptor.Height = extent.height;

@@ -1,6 +1,8 @@
 #include "VulkanResources.h"
-#include "VulkanDevice.h"
+
 #include "VulkanBuffer.h"
+#include "VulkanDevice.h"
+#include "VulkanRHI.h"
 
 #include <algorithm>
 #include <cstring>
@@ -12,121 +14,119 @@ namespace render::rhi
 namespace
 {
 
-void normalizeTextureDescriptor(RTextureDescriptor& TextureDesc)
+void normalizeImageDescriptor(RImageDescriptor& ImageDesc)
 {
-	TextureDesc.Width = std::max(1u, TextureDesc.Width);
-	TextureDesc.Height = std::max(1u, TextureDesc.Height);
-	TextureDesc.Depth = std::max(1u, TextureDesc.Depth);
-	TextureDesc.MipLevels = std::max(1u, TextureDesc.MipLevels);
-	TextureDesc.ArrayLayers = std::max(1u, TextureDesc.ArrayLayers);
+	ImageDesc.Width = std::max(1u, ImageDesc.Width);
+	ImageDesc.Height = std::max(1u, ImageDesc.Height);
+	ImageDesc.Depth = std::max(1u, ImageDesc.Depth);
+	ImageDesc.MipLevels = std::max(1u, ImageDesc.MipLevels);
+	ImageDesc.ArrayLayers = std::max(1u, ImageDesc.ArrayLayers);
 
-	switch (TextureDesc.Dimension)
+	switch (ImageDesc.Dimension)
 	{
-	case ETextureDimension::Texture1D:
-		TextureDesc.Height = 1;
-		TextureDesc.Depth = 1;
-		TextureDesc.ArrayLayers = 1;
+	case EImageDimension::Texture1D:
+		ImageDesc.Height = 1;
+		ImageDesc.Depth = 1;
+		ImageDesc.ArrayLayers = 1;
 		break;
-	case ETextureDimension::Texture1DArray:
-		TextureDesc.Height = 1;
-		TextureDesc.Depth = 1;
+	case EImageDimension::Texture1DArray:
+		ImageDesc.Height = 1;
+		ImageDesc.Depth = 1;
 		break;
-	case ETextureDimension::Texture3D:
-		TextureDesc.ArrayLayers = 1;
+	case EImageDimension::Texture3D:
+		ImageDesc.ArrayLayers = 1;
 		break;
-	case ETextureDimension::Cube:
-		TextureDesc.Depth = 1;
-		TextureDesc.ArrayLayers = 6;
+	case EImageDimension::Cube:
+		ImageDesc.Depth = 1;
+		ImageDesc.ArrayLayers = 6;
 		break;
-	case ETextureDimension::CubeArray:
-		TextureDesc.Depth = 1;
-		if (TextureDesc.ArrayLayers < 6)
+	case EImageDimension::CubeArray:
+		ImageDesc.Depth = 1;
+		if (ImageDesc.ArrayLayers < 6)
 		{
-			TextureDesc.ArrayLayers = 6;
+			ImageDesc.ArrayLayers = 6;
 		}
-		if ((TextureDesc.ArrayLayers % 6) != 0)
+		if ((ImageDesc.ArrayLayers % 6) != 0)
 		{
-			TextureDesc.ArrayLayers = Align<uint32_t>(TextureDesc.ArrayLayers, 6);
+			ImageDesc.ArrayLayers = Align<uint32_t>(ImageDesc.ArrayLayers, 6);
 		}
 		break;
-	case ETextureDimension::Texture2D:
-		TextureDesc.Depth = 1;
-		TextureDesc.ArrayLayers = 1;
+	case EImageDimension::Texture2D:
+		ImageDesc.Depth = 1;
+		ImageDesc.ArrayLayers = 1;
 		break;
-	case ETextureDimension::Texture2DArray:
-		TextureDesc.Depth = 1;
+	case EImageDimension::Texture2DArray:
+		ImageDesc.Depth = 1;
 		break;
 	default:
 		break;
 	}
 
-	if (TextureDesc.Usage == ETextureUsage::None)
+	if (ImageDesc.Usage == EImageUsage::None)
 	{
-		TextureDesc.Usage = isDepthFormat(TextureDesc.Format)
-			? ETextureUsage::DepthStencil
-			: ETextureUsage::Sampled;
+		ImageDesc.Usage = isDepthFormat(ImageDesc.Format) ? EImageUsage::DepthStencil : EImageUsage::Sampled;
 	}
 }
 
-VkImageViewType toVkImageViewType(ETextureDimension Dimension)
+VkImageViewType toVkImageViewType(EImageDimension Dimension)
 {
 	switch (Dimension)
 	{
-	case ETextureDimension::Texture1D:
+	case EImageDimension::Texture1D:
 		return VK_IMAGE_VIEW_TYPE_1D;
-	case ETextureDimension::Texture1DArray:
+	case EImageDimension::Texture1DArray:
 		return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-	case ETextureDimension::Texture2D:
+	case EImageDimension::Texture2D:
 		return VK_IMAGE_VIEW_TYPE_2D;
-	case ETextureDimension::Texture2DArray:
+	case EImageDimension::Texture2DArray:
 		return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-	case ETextureDimension::Texture3D:
+	case EImageDimension::Texture3D:
 		return VK_IMAGE_VIEW_TYPE_3D;
-	case ETextureDimension::Cube:
+	case EImageDimension::Cube:
 		return VK_IMAGE_VIEW_TYPE_CUBE;
-	case ETextureDimension::CubeArray:
+	case EImageDimension::CubeArray:
 		return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
 	default:
 		return VK_IMAGE_VIEW_TYPE_2D;
 	}
 }
 
-VkExtent3D getMipExtent(const RTextureDescriptor& TextureDesc, uint32_t MipLevel)
+VkExtent3D getMipExtent(const RImageDescriptor& ImageDesc, uint32_t MipLevel)
 {
-	const uint32_t mip_width = std::max(1u, TextureDesc.Width >> MipLevel);
-	const uint32_t mip_height = std::max(1u, TextureDesc.Height >> MipLevel);
-	const uint32_t mip_depth = std::max(1u, TextureDesc.Depth >> MipLevel);
+	const uint32_t mip_width = std::max(1u, ImageDesc.Width >> MipLevel);
+	const uint32_t mip_height = std::max(1u, ImageDesc.Height >> MipLevel);
+	const uint32_t mip_depth = std::max(1u, ImageDesc.Depth >> MipLevel);
 
-	if (TextureDesc.Dimension == ETextureDimension::Texture1D || TextureDesc.Dimension == ETextureDimension::Texture1DArray)
+	if (ImageDesc.Dimension == EImageDimension::Texture1D || ImageDesc.Dimension == EImageDimension::Texture1DArray)
 	{
 		return { mip_width, 1, 1 };
 	}
-	if (TextureDesc.Dimension == ETextureDimension::Texture3D)
+	if (ImageDesc.Dimension == EImageDimension::Texture3D)
 	{
 		return { mip_width, mip_height, mip_depth };
 	}
 	return { mip_width, mip_height, 1 };
 }
 
-VkImageLayout getPreferredImageLayout(const RTextureDescriptor& TextureDesc)
+VkImageLayout getPreferredImageLayout(const RImageDescriptor& ImageDesc)
 {
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::Present))
+	if (hasAnyFlags(ImageDesc.Usage, EImageUsage::Present))
 	{
 		return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	}
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::DepthStencil) || isDepthFormat(TextureDesc.Format))
+	if (hasAnyFlags(ImageDesc.Usage, EImageUsage::DepthStencil) || isDepthFormat(ImageDesc.Format))
 	{
 		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	}
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::Target))
+	if (hasAnyFlags(ImageDesc.Usage, EImageUsage::Target))
 	{
 		return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	}
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::Storage))
+	if (hasAnyFlags(ImageDesc.Usage, EImageUsage::Storage))
 	{
 		return VK_IMAGE_LAYOUT_GENERAL;
 	}
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::Sampled))
+	if (hasAnyFlags(ImageDesc.Usage, EImageUsage::Sampled))
 	{
 		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}
@@ -182,13 +182,13 @@ VkAccessFlags getAccessMaskForLayout(VkImageLayout Layout)
 	}
 }
 
-RTextureViewDescriptor::EViewType getDefaultViewType(const RTextureDescriptor& TextureDesc)
+RTextureViewDescriptor::EViewType getDefaultViewType(const RImageDescriptor& ImageDesc)
 {
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::DepthStencil) || isDepthFormat(TextureDesc.Format))
+	if (hasAnyFlags(ImageDesc.Usage, EImageUsage::DepthStencil) || isDepthFormat(ImageDesc.Format))
 	{
 		return RTextureViewDescriptor::EViewType::DSV;
 	}
-	if (hasAnyFlags(TextureDesc.Usage, ETextureUsage::Target) || hasAnyFlags(TextureDesc.Usage, ETextureUsage::Present))
+	if (hasAnyFlags(ImageDesc.Usage, EImageUsage::Target) || hasAnyFlags(ImageDesc.Usage, EImageUsage::Present))
 	{
 		return RTextureViewDescriptor::EViewType::RTV;
 	}
@@ -197,67 +197,73 @@ RTextureViewDescriptor::EViewType getDefaultViewType(const RTextureDescriptor& T
 
 } // namespace
 
-VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc)
+VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RImageDescriptor& InImageDesc)
 	: Device(InDevice)
-	, TextureDesc(InTextureDesc)
+	, ImageDescriptor(InImageDesc)
 {
 	if (!Device || !Device->isValid())
 	{
 		return;
 	}
 
-	normalizeTextureDescriptor(TextureDesc);
-	Image = std::make_unique<VulkanImage>(Device, TextureDesc);
+	normalizeImageDescriptor(ImageDescriptor);
+
+	Image = std::make_unique<VulkanImage>(Device, ImageDescriptor);
 	if (!Image || !Image->isValid())
 	{
 		return;
 	}
 
 	DefaultView = createView(buildDefaultViewDescriptor());
-	if (!TextureDesc.Name.empty())
+	if (!ImageDescriptor.Name.empty())
 	{
-		setDebugName(TextureDesc.Name);
+		setDebugName(ImageDescriptor.Name);
 	}
 }
 
-VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc, const RTextureBulkData& InBulkData)
+VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RImageDescriptor& InImageDesc, const RTextureBulkData& InBulkData)
 	: Device(InDevice)
-	, TextureDesc(InTextureDesc)
+	, ImageDescriptor(InImageDesc)
 {
 	if (!Device || !Device->isValid())
 	{
 		return;
 	}
 
-	normalizeTextureDescriptor(TextureDesc);
-	Image = std::make_unique<VulkanImage>(Device, TextureDesc);
+	normalizeImageDescriptor(ImageDescriptor);
+	Image = std::make_unique<VulkanImage>(Device, ImageDescriptor);
 	if (!Image || !Image->isValid())
 	{
 		return;
 	}
 
-	uploadBulkData(InBulkData);
-	if (TextureDesc.ShouldGenerateMipmaps && TextureDesc.MipLevels > 1)
+	if (uploadBulkData(InBulkData) && ImageDescriptor.ShouldGenerateMipmaps && ImageDescriptor.MipLevels > 1)
 	{
 		generateMipmaps();
 	}
 
 	DefaultView = createView(buildDefaultViewDescriptor());
-	if (!TextureDesc.Name.empty())
+	if (!ImageDescriptor.Name.empty())
 	{
-		setDebugName(TextureDesc.Name);
+		setDebugName(ImageDescriptor.Name);
 	}
 }
 
-VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& InTextureDesc, VkImage InExternalImage, VkImageView InExternalView)
+VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RImageDescriptor& InImageDesc, VkImage InExternalImage, VkImageView InExternalView)
 	: Device(InDevice)
-	, TextureDesc(InTextureDesc)
+	, ImageDescriptor(InImageDesc)
 {
-	normalizeTextureDescriptor(TextureDesc);
-	const VkImageLayout initial_layout = hasAnyFlags(TextureDesc.Usage, ETextureUsage::Present)
+	normalizeImageDescriptor(ImageDescriptor);
+
+	const VkImageLayout initial_layout = hasAnyFlags(ImageDescriptor.Usage, EImageUsage::Present)
 		? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 		: VK_IMAGE_LAYOUT_UNDEFINED;
+
 	Image = std::make_unique<VulkanImage>(Device, InExternalImage, initial_layout);
+	if (!Image || !Image->isValid())
+	{
+		return;
+	}
 
 	RTextureViewDescriptor default_descriptor = buildDefaultViewDescriptor();
 	DefaultView = new VulkanTextureView(this, default_descriptor, InExternalView, true);
@@ -266,13 +272,12 @@ VulkanTexture::VulkanTexture(VulkanDevice* InDevice, const RTextureDescriptor& I
 
 VulkanTexture::~VulkanTexture()
 {
-	for (RTextureView* view : Views)
+	for (RTextureView* view_base : Views)
 	{
-		delete view;
+		delete view_base;
 	}
 	Views.clear();
 	DefaultView = nullptr;
-
 	Image.reset();
 }
 
@@ -287,18 +292,18 @@ void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void
 	{
 		return;
 	}
-	if (Region.MipIndex >= TextureDesc.MipLevels || Region.ArrayLayer >= TextureDesc.ArrayLayers)
+	if (Region.MipIndex >= ImageDescriptor.MipLevels || Region.ArrayLayer >= ImageDescriptor.ArrayLayers)
 	{
 		return;
 	}
 
-	const uint32_t pixel_size = calPixelSizeFormEFormat(TextureDesc.Format);
+	const uint32_t pixel_size = calPixelSizeFormEFormat(ImageDescriptor.Format);
 	if (pixel_size == 0)
 	{
 		return;
 	}
 
-	const VkExtent3D mip_extent = getMipExtent(TextureDesc, Region.MipIndex);
+	const VkExtent3D mip_extent = getMipExtent(ImageDescriptor, Region.MipIndex);
 	if (Region.DstX >= mip_extent.width || Region.DstY >= mip_extent.height || Region.DstZ >= mip_extent.depth)
 	{
 		return;
@@ -320,17 +325,18 @@ void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void
 	}
 
 	const uint64_t upload_size = static_cast<uint64_t>(depth_pitch) * copy_depth;
-	auto* staging_buffer = static_cast<VulkanBuffer*>(Device->createStagingBuffer(nullptr, upload_size));
+	RBuffer* staging_buffer_base = Device->createStagingBuffer(nullptr, upload_size);
+	auto* staging_buffer = static_cast<VulkanBuffer*>(staging_buffer_base);
 	if (!staging_buffer || !staging_buffer->isValid())
 	{
-		Device->destroyResource(staging_buffer);
+		Device->destroyResource(staging_buffer_base);
 		return;
 	}
 
 	uint8_t* mapped_ptr = static_cast<uint8_t*>(staging_buffer->mapRange(EBufferMapMode::Write, 0, upload_size));
 	if (!mapped_ptr)
 	{
-		Device->destroyResource(staging_buffer);
+		Device->destroyResource(staging_buffer_base);
 		return;
 	}
 
@@ -350,6 +356,12 @@ void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void
 
 	const VkImageLayout previous_layout = Image->getLayout();
 	VkCommandBuffer command_buffer = Device->beginImmediateCommand();
+	if (command_buffer == VK_NULL_HANDLE)
+	{
+		Device->destroyResource(staging_buffer_base);
+		return;
+	}
+
 	transitionImageLayout(
 		command_buffer,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -382,7 +394,7 @@ void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void
 		&copy_region);
 
 	const VkImageLayout restore_layout = previous_layout == VK_IMAGE_LAYOUT_UNDEFINED
-		? getPreferredImageLayout(TextureDesc)
+		? getPreferredImageLayout(ImageDescriptor)
 		: previous_layout;
 	if (restore_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 	{
@@ -396,34 +408,39 @@ void VulkanTexture::updateTexture(const RTextureUpdateRegion& Region, const void
 	}
 
 	Device->endImmediateCommand(command_buffer);
-	Device->destroyResource(staging_buffer);
+	Device->destroyResource(staging_buffer_base);
 }
 
 void VulkanTexture::generateMipmaps()
 {
-	if (!Device || !isValid() || TextureDesc.MipLevels <= 1)
+	if (!Device || !isValid() || ImageDescriptor.MipLevels <= 1)
 	{
 		return;
 	}
 
-	if (isDepthStencilFormat(TextureDesc.Format))
+	if (isDepthStencilFormat(ImageDescriptor.Format))
 	{
 		return;
 	}
 
 	VkFormatProperties format_properties{};
-	vkGetPhysicalDeviceFormatProperties(Device->getVkPhysicalDevice(), toVkFormat(TextureDesc.Format), &format_properties);
+	vkGetPhysicalDeviceFormatProperties(Device->getVkPhysicalDevice(), toVkFormat(ImageDescriptor.Format), &format_properties);
 	if ((format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) == 0)
 	{
 		return;
 	}
 
-	const VkImageLayout final_layout = getPreferredImageLayout(TextureDesc);
+	const VkImageLayout final_layout = getPreferredImageLayout(ImageDescriptor);
 	const VkPipelineStageFlags final_stage = getPipelineStageForLayout(final_layout);
 	const VkAccessFlags final_access = getAccessMaskForLayout(final_layout);
 
 	const VkImageLayout previous_layout = Image->getLayout();
 	VkCommandBuffer command_buffer = Device->beginImmediateCommand();
+	if (command_buffer == VK_NULL_HANDLE)
+	{
+		return;
+	}
+
 	transitionImageLayout(
 		command_buffer,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -433,9 +450,9 @@ void VulkanTexture::generateMipmaps()
 		VK_ACCESS_TRANSFER_WRITE_BIT);
 
 	const VkImageAspectFlags aspect_mask = getAspectMask();
-	for (uint32_t layer = 0; layer < TextureDesc.ArrayLayers; ++layer)
+	for (uint32_t layer = 0; layer < ImageDescriptor.ArrayLayers; ++layer)
 	{
-		for (uint32_t mip = 1; mip < TextureDesc.MipLevels; ++mip)
+		for (uint32_t mip = 1; mip < ImageDescriptor.MipLevels; ++mip)
 		{
 			VkImageMemoryBarrier to_src_barrier{};
 			to_src_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -464,8 +481,8 @@ void VulkanTexture::generateMipmaps()
 				1,
 				&to_src_barrier);
 
-			const VkExtent3D src_extent = getMipExtent(TextureDesc, mip - 1);
-			const VkExtent3D dst_extent = getMipExtent(TextureDesc, mip);
+			const VkExtent3D src_extent = getMipExtent(ImageDescriptor, mip - 1);
+			const VkExtent3D dst_extent = getMipExtent(ImageDescriptor, mip);
 
 			VkImageBlit blit{};
 			blit.srcSubresource.aspectMask = aspect_mask;
@@ -542,7 +559,7 @@ void VulkanTexture::generateMipmaps()
 			last_level_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			last_level_barrier.image = Image->getVkImage();
 			last_level_barrier.subresourceRange.aspectMask = aspect_mask;
-			last_level_barrier.subresourceRange.baseMipLevel = TextureDesc.MipLevels - 1;
+			last_level_barrier.subresourceRange.baseMipLevel = ImageDescriptor.MipLevels - 1;
 			last_level_barrier.subresourceRange.levelCount = 1;
 			last_level_barrier.subresourceRange.baseArrayLayer = layer;
 			last_level_barrier.subresourceRange.layerCount = 1;
@@ -561,15 +578,7 @@ void VulkanTexture::generateMipmaps()
 		}
 	}
 
-	if (final_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-	{
-		Image->setLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	}
-	else
-	{
-		Image->setLayout(final_layout);
-	}
-
+	Image->setLayout(final_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ? VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL : final_layout);
 	Device->endImmediateCommand(command_buffer);
 }
 
@@ -581,24 +590,24 @@ RTextureView* VulkanTexture::createView(const RTextureViewDescriptor& Descriptor
 	}
 
 	RTextureViewDescriptor resolved_descriptor = Descriptor;
-	resolved_descriptor.Format = (Descriptor.Format == EFormat::Undefined) ? TextureDesc.Format : Descriptor.Format;
+	resolved_descriptor.Format = Descriptor.Format == EFormat::Undefined ? ImageDescriptor.Format : Descriptor.Format;
 
-	if (resolved_descriptor.MipLevel >= TextureDesc.MipLevels || resolved_descriptor.ArrayLayer >= TextureDesc.ArrayLayers)
+	if (resolved_descriptor.MipLevel >= ImageDescriptor.MipLevels || resolved_descriptor.ArrayLayer >= ImageDescriptor.ArrayLayers)
 	{
 		return nullptr;
 	}
 
-	const uint32_t remaining_mips = TextureDesc.MipLevels - resolved_descriptor.MipLevel;
-	resolved_descriptor.MipLevelCount = (Descriptor.MipLevelCount == 0)
+	const uint32_t remaining_mips = ImageDescriptor.MipLevels - resolved_descriptor.MipLevel;
+	resolved_descriptor.MipLevelCount = Descriptor.MipLevelCount == 0
 		? remaining_mips
 		: std::min<uint32_t>(Descriptor.MipLevelCount, remaining_mips);
 
-	const uint32_t remaining_layers = TextureDesc.ArrayLayers - resolved_descriptor.ArrayLayer;
-	resolved_descriptor.ArrayLayerCount = (Descriptor.ArrayLayerCount == 0)
+	const uint32_t remaining_layers = ImageDescriptor.ArrayLayers - resolved_descriptor.ArrayLayer;
+	resolved_descriptor.ArrayLayerCount = Descriptor.ArrayLayerCount == 0
 		? remaining_layers
 		: std::min<uint32_t>(Descriptor.ArrayLayerCount, remaining_layers);
 
-	if (TextureDesc.Dimension == ETextureDimension::Texture3D)
+	if (ImageDescriptor.Dimension == EImageDimension::Texture3D)
 	{
 		resolved_descriptor.ArrayLayer = 0;
 		resolved_descriptor.ArrayLayerCount = 1;
@@ -608,20 +617,15 @@ RTextureView* VulkanTexture::createView(const RTextureViewDescriptor& Descriptor
 		return nullptr;
 	}
 
-	if (resolved_descriptor.Dimension == ETextureDimension::Texture2D && TextureDesc.Dimension != ETextureDimension::Texture2D)
+	if (resolved_descriptor.Dimension == EImageDimension::Texture2D && ImageDescriptor.Dimension != EImageDimension::Texture2D)
 	{
-		resolved_descriptor.Dimension = TextureDesc.Dimension;
+		resolved_descriptor.Dimension = ImageDescriptor.Dimension;
 	}
 
 	for (RTextureView* existing_view_base : Views)
 	{
-		auto* existing_view = dynamic_cast<VulkanTextureView*>(existing_view_base);
-		if (!existing_view)
-		{
-			continue;
-		}
-
-		const RTextureViewDescriptor existing_descriptor = existing_view->getDescriptor();
+		auto* existing_view = static_cast<VulkanTextureView*>(existing_view_base);
+		const RTextureViewDescriptor& existing_descriptor = existing_view->getDescriptor();
 		if (existing_descriptor.Type == resolved_descriptor.Type &&
 			existing_descriptor.Aspect == resolved_descriptor.Aspect &&
 			existing_descriptor.Format == resolved_descriptor.Format &&
@@ -667,7 +671,7 @@ RTextureView* VulkanTexture::createView(const RTextureViewDescriptor& Descriptor
 
 VkImageAspectFlags VulkanTexture::getAspectMask() const noexcept
 {
-	return toVkImageAspectMask(ETextureAspect::Auto, TextureDesc.Format);
+	return toVkImageAspectMask(ETextureAspect::Auto, ImageDescriptor.Format);
 }
 
 bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
@@ -677,7 +681,7 @@ bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
 		return false;
 	}
 
-	const uint32_t pixel_size = calPixelSizeFormEFormat(TextureDesc.Format);
+	const uint32_t pixel_size = calPixelSizeFormEFormat(ImageDescriptor.Format);
 	if (pixel_size == 0)
 	{
 		return false;
@@ -693,15 +697,15 @@ bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
 	};
 
 	std::vector<UploadChunk> chunks;
-	chunks.reserve(static_cast<size_t>(TextureDesc.MipLevels) * TextureDesc.ArrayLayers);
+	chunks.reserve(static_cast<size_t>(ImageDescriptor.MipLevels) * ImageDescriptor.ArrayLayers);
 	uint64_t total_size = 0;
 
-	for (uint32_t mip = 0; mip < TextureDesc.MipLevels; ++mip)
+	for (uint32_t mip = 0; mip < ImageDescriptor.MipLevels; ++mip)
 	{
-		const VkExtent3D mip_extent = getMipExtent(TextureDesc, mip);
-		for (uint32_t layer = 0; layer < TextureDesc.ArrayLayers; ++layer)
+		const VkExtent3D mip_extent = getMipExtent(ImageDescriptor, mip);
+		for (uint32_t layer = 0; layer < ImageDescriptor.ArrayLayers; ++layer)
 		{
-			TextureHelper::SubresourceInfo subresource = TextureHelper::getSubresourceData(TextureDesc, &InBulkData, mip, layer);
+			TextureHelper::SubresourceInfo subresource = TextureHelper::getSubresourceData(ImageDescriptor, &InBulkData, mip, layer);
 			if (!subresource.Data)
 			{
 				return false;
@@ -735,17 +739,18 @@ bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
 		}
 	}
 
-	auto* staging_buffer = static_cast<VulkanBuffer*>(Device->createStagingBuffer(nullptr, total_size));
+	RBuffer* staging_buffer_base = Device->createStagingBuffer(nullptr, total_size);
+	auto* staging_buffer = static_cast<VulkanBuffer*>(staging_buffer_base);
 	if (!staging_buffer || !staging_buffer->isValid())
 	{
-		Device->destroyResource(staging_buffer);
+		Device->destroyResource(staging_buffer_base);
 		return false;
 	}
 
 	uint8_t* mapped_ptr = static_cast<uint8_t*>(staging_buffer->mapRange(EBufferMapMode::Write, 0, total_size));
 	if (!mapped_ptr)
 	{
-		Device->destroyResource(staging_buffer);
+		Device->destroyResource(staging_buffer_base);
 		return false;
 	}
 
@@ -775,10 +780,16 @@ bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
 		copy_regions.push_back(chunk.Region);
 	}
 
-	const VkImageLayout preferred_layout = getPreferredImageLayout(TextureDesc);
-	const bool will_generate_mips = TextureDesc.ShouldGenerateMipmaps && TextureDesc.MipLevels > 1;
+	const VkImageLayout preferred_layout = getPreferredImageLayout(ImageDescriptor);
+	const bool will_generate_mips = ImageDescriptor.ShouldGenerateMipmaps && ImageDescriptor.MipLevels > 1;
 
 	VkCommandBuffer command_buffer = Device->beginImmediateCommand();
+	if (command_buffer == VK_NULL_HANDLE)
+	{
+		Device->destroyResource(staging_buffer_base);
+		return false;
+	}
+
 	transitionImageLayout(
 		command_buffer,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -807,7 +818,7 @@ bool VulkanTexture::uploadBulkData(const RTextureBulkData& InBulkData)
 	}
 
 	Device->endImmediateCommand(command_buffer);
-	Device->destroyResource(staging_buffer);
+	Device->destroyResource(staging_buffer_base);
 	return true;
 }
 
@@ -832,7 +843,7 @@ bool VulkanTexture::transitionImageLayout(
 	const VkImageLayout old_layout = Image->getLayout();
 	VkImageSubresourceRange range = SubresourceRange
 		? *SubresourceRange
-		: buildSubresourceRange(0, TextureDesc.MipLevels, 0, TextureDesc.ArrayLayers);
+		: buildSubresourceRange(0, ImageDescriptor.MipLevels, 0, ImageDescriptor.ArrayLayers);
 
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -879,11 +890,11 @@ VkImageSubresourceRange VulkanTexture::buildSubresourceRange(
 {
 	VkImageSubresourceRange range{};
 	range.aspectMask = getAspectMask();
-	range.baseMipLevel = std::min(BaseMipLevel, TextureDesc.MipLevels - 1);
-	range.baseArrayLayer = std::min(BaseArrayLayer, TextureDesc.ArrayLayers - 1);
+	range.baseMipLevel = std::min(BaseMipLevel, ImageDescriptor.MipLevels - 1);
+	range.baseArrayLayer = std::min(BaseArrayLayer, ImageDescriptor.ArrayLayers - 1);
 
-	const uint32_t available_mips = TextureDesc.MipLevels - range.baseMipLevel;
-	const uint32_t available_layers = TextureDesc.ArrayLayers - range.baseArrayLayer;
+	const uint32_t available_mips = ImageDescriptor.MipLevels - range.baseMipLevel;
+	const uint32_t available_layers = ImageDescriptor.ArrayLayers - range.baseArrayLayer;
 	range.levelCount = std::min(available_mips, std::max(1u, MipLevelCount));
 	range.layerCount = std::min(available_layers, std::max(1u, ArrayLayerCount));
 	return range;
@@ -892,14 +903,14 @@ VkImageSubresourceRange VulkanTexture::buildSubresourceRange(
 RTextureViewDescriptor VulkanTexture::buildDefaultViewDescriptor() const
 {
 	RTextureViewDescriptor descriptor{};
-	descriptor.Type = getDefaultViewType(TextureDesc);
+	descriptor.Type = getDefaultViewType(ImageDescriptor);
 	descriptor.Aspect = ETextureAspect::Auto;
-	descriptor.Format = TextureDesc.Format;
+	descriptor.Format = ImageDescriptor.Format;
 	descriptor.MipLevel = 0;
-	descriptor.MipLevelCount = TextureDesc.MipLevels;
+	descriptor.MipLevelCount = ImageDescriptor.MipLevels;
 	descriptor.ArrayLayer = 0;
-	descriptor.ArrayLayerCount = TextureDesc.ArrayLayers;
-	descriptor.Dimension = TextureDesc.Dimension;
+	descriptor.ArrayLayerCount = ImageDescriptor.ArrayLayers;
+	descriptor.Dimension = ImageDescriptor.Dimension;
 	return descriptor;
 }
 
@@ -908,22 +919,22 @@ void VulkanTexture::setDebugName(const std::string& Name)
 	(void)Name;
 }
 
-VulkanTextureView::VulkanTextureView(VulkanTexture* InTexture, const RTextureViewDescriptor& InDescriptor, VkImageView InView, bool bInOwnsView)
-	: Texture(InTexture)
+VulkanTextureView::VulkanTextureView(VulkanTexture* InImage, const RTextureViewDescriptor& InDescriptor, VkImageView InView, bool InOwnsView)
+	: Image(InImage)
 	, Descriptor(InDescriptor)
 	, View(InView)
-	, OwnsView(bInOwnsView)
+	, OwnsView(InOwnsView)
 {
 }
 
 VulkanTextureView::~VulkanTextureView()
 {
-	if (!OwnsView || View == VK_NULL_HANDLE || !Texture || !Texture->getDevice())
+	if (!OwnsView || View == VK_NULL_HANDLE || !Image || !Image->getDevice())
 	{
 		return;
 	}
 
-	VkDevice vk_device = Texture->getDevice()->getVkDevice();
+	VkDevice vk_device = Image->getDevice()->getVkDevice();
 	if (vk_device == VK_NULL_HANDLE)
 	{
 		return;

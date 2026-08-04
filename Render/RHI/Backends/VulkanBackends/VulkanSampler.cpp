@@ -1,4 +1,5 @@
-#include "VulkanResources.h"
+#include "VulkanSampler.h"
+
 #include "VulkanDevice.h"
 
 namespace render::rhi

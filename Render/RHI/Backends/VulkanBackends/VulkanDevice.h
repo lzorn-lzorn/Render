@@ -32,8 +32,8 @@ public:
 
 	RBuffer* createBuffer(const RBufferDescriptor& Descriptor) override;
 	RBuffer* createStagingBuffer(const void* Data, uint64_t Size, uint64_t InitialDataSize = 0) override;
-	RTexture* createTexture(const RTextureDescriptor& Descriptor) override;
-	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor, RTextureBulkData data) override;
+	RImage* createImage(const RImageDescriptor& Descriptor) override;
+	RImage* createImage(const RImageDescriptor& Descriptor, const RTextureBulkData& Data) override;
 
 	RSampler* createSampler(const RSamplerDescriptor& Descriptor) override;
 	RShader* createShader(const RShaderDescriptor& Descriptor) override;

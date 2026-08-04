@@ -5,7 +5,7 @@ target_sources(${LibarayName} PRIVATE
 	VulkanRHI.cpp
 	VulkanBuffer.cpp
 	VulkanImage.cpp
-	VulkanResources.cpp
+	VulkanSampler.cpp
 	VulkanFence.cpp
 	VulkanPipeline.cpp
 	VulkanShader.cpp

@@ -5,6 +5,7 @@
 #include "VulkanPipeline.h"
 #include "VulkanRHI.h"
 #include "VulkanResources.h"
+#include "VulkanSampler.h"
 #include "VulkanShader.h"
 #include "VulkanSwapchain.h"
 #include "VulkanBuffer.h"
@@ -112,12 +113,12 @@ RBuffer* VulkanDevice::createStagingBuffer(const void* Data, uint64_t Size, uint
 	return new VulkanBuffer(this, Descriptor);
 }
 
-RTexture* VulkanDevice::createTexture(const RTextureDescriptor& Descriptor)
+RImage* VulkanDevice::createImage(const RImageDescriptor& Descriptor)
 {
 	return new VulkanTexture(this, Descriptor);
 }
 
-RTexture* VulkanDevice::createTexture(const RTextureDescriptor& Descriptor, RTextureBulkData Data)
+RImage* VulkanDevice::createImage(const RImageDescriptor& Descriptor, const RTextureBulkData& Data)
 {
 	return new VulkanTexture(this, Descriptor, Data);
 }

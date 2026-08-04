@@ -23,6 +23,7 @@ enum class ESupportedBackendAPI
 enum class EResourceType
 {
 	Buffer,
+	Image,
 	Texture,
 	Sampler,
 	Shader,
@@ -169,7 +170,7 @@ inline EBufferUsage operator&(EBufferUsage a, EBufferUsage b)
 	return static_cast<EBufferUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 }
 
-enum class ETextureUsage : uint32_t
+enum class EImageUsage : uint32_t
 {
 	None         = 0,
 	Sampled      = 1 << 0,
@@ -180,17 +181,17 @@ enum class ETextureUsage : uint32_t
 	TransferDst  = 1 << 5,
 	Present      = 1 << 6,
 };
-inline ETextureUsage operator|(ETextureUsage a, ETextureUsage b)
+inline EImageUsage operator|(EImageUsage a, EImageUsage b)
 {
-	return static_cast<ETextureUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	return static_cast<EImageUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
 
-inline ETextureUsage operator&(ETextureUsage a, ETextureUsage b)
+inline EImageUsage operator&(EImageUsage a, EImageUsage b)
 {
-	return static_cast<ETextureUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	return static_cast<EImageUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 }
 
-enum class ETextureDimension : uint8_t
+enum class EImageDimension : uint8_t
 {
     Texture1D,          // 1D 纹理
     Texture1DArray,     // 1D 纹理数组
@@ -442,11 +443,12 @@ struct RBufferDescriptor
 	}
 };
 
-struct RTextureDescriptor
+
+struct RImageDescriptor
 {
-	ETextureUsage Usage = ETextureUsage::None;
+	EImageUsage Usage = EImageUsage::None;
 	EFormat Format = EFormat::BGRA8_UNorm;
-	ETextureDimension Dimension = ETextureDimension::Texture2D;
+	EImageDimension Dimension = EImageDimension::Texture2D;
 	uint32_t Width = 1;
 	uint32_t Height = 1;
 	uint32_t Depth = 1;
@@ -477,7 +479,7 @@ struct TextureHelper
 
 	// 根据指定的 Mip 级别和数组层索引从一整块连续的初始纹理数据中,切分出对应的子资源数
     // 据块,并提供其数据指针,行跨距和层跨距
-	static SubresourceInfo getSubresourceData(const RTextureDescriptor& Desc, const RTextureBulkData* BulkDataPtr, uint32_t MipLevel, uint32_t ArrayLayer)
+	static SubresourceInfo getSubresourceData(const RImageDescriptor& Desc, const RTextureBulkData* BulkDataPtr, uint32_t MipLevel, uint32_t ArrayLayer)
 	{
 		if (!BulkDataPtr || MipLevel >= Desc.MipLevels || ArrayLayer >= Desc.ArrayLayers)
         {
@@ -712,7 +714,7 @@ struct RTextureViewDescriptor
 	uint32_t MipLevelCount = 1;
 	uint32_t ArrayLayer = 0;
 	uint32_t ArrayLayerCount = 1;
-	ETextureDimension Dimension = ETextureDimension::Texture2D;
+	EImageDimension Dimension = EImageDimension::Texture2D;
 };
 
 struct RClearValue
@@ -749,7 +751,7 @@ struct RRenderPassDescriptor
 
 struct RResourceBarrier
 {
-	class RTexture* Texture = nullptr;
+	class RImage* Image = nullptr;
 	EResourceState Before = EResourceState::Undefined;
 	EResourceState After = EResourceState::Common;
 };
@@ -851,50 +853,45 @@ struct RTextureCopyDescriptor
 	uint32_t Depth = 1;
 };
 
+class RImage : public RResource
+{
+public:
+	virtual EResourceType getType() const override { return EResourceType::Image; }
+	virtual const RImageDescriptor& getDescriptor() const = 0;
+	virtual class RTextureView* createView(const RTextureViewDescriptor& Descriptor) = 0;
 
+	/**
+	 * @brief 更新图像存储数据
+	 */
+	virtual void updateTexture(const RTextureUpdateRegion& Region, const void* SrcData, uint32_t SrcRowPitch, uint32_t SrcDepthPitch = 0) = 0;
 
+	/**
+	 * @brief GPU 自动生成图像 mipmap
+	 */
+	virtual void generateMipmaps() = 0;
+
+	virtual EImageUsage getUsage() const { return getDescriptor().Usage; }
+	virtual uint32_t getMipLevels() const { return getDescriptor().MipLevels; }
+	virtual uint32_t getArrayLayers() const { return getDescriptor().ArrayLayers; }
+	virtual EImageDimension getDimension() const { return getDescriptor().Dimension; }
+	virtual uint32_t getWidth() const { return getDescriptor().Width; }
+	virtual uint32_t getHeight() const { return getDescriptor().Height; }
+	virtual uint32_t getDepth() const { return getDescriptor().Depth; }
+	virtual EFormat getFormat() const { return getDescriptor().Format; }
+};
 
 class RTexture : public RResource
 {
 public:
 	virtual EResourceType getType() const override { return EResourceType::Texture; }
-	virtual class RTextureView* createView(const RTextureViewDescriptor& Descriptor) = 0;
-	virtual const RTextureDescriptor& getDescriptor() const = 0;
-
-	/**
-	 * @brief 更新纹理数据
-	 * @param Region 更新区域描述
-	 * @param SrcData CPU端源数据指针, 数据格式应与纹理格式
-	 * 	指向连续排列的像素数据, 按行,层顺序存储, 中间没有额外填充, 数据类型格式必须与纹
-	 *	理创建时指定的 EFormat 匹配
-	 * @param SrcRowPitch 源数据每行的字节数, 如果为 0 则按纹理格式计算
-	 * 	一行像素占用的字节数, 可能大于 SrcWidth * 每像素字节数
-	 * @param SrcDepthPitch 源数据每层(深度)的字节数, 如果为 0 则按纹理格式计算
-	 * 	仅用于 3D 纹理或纹理数组一次更新多个深度和层, 其表示从一层(slice)的起始位置到下
-	 *  一层的起始位置的字节数. 对于 2D 纹理或一次只更新一层, 此值为 0
-	 */
-	virtual void updateTexture(const RTextureUpdateRegion& Region, const void* SrcData, uint32_t SrcRowPitch, uint32_t SrcDepthPitch = 0) = 0;
-
-	/**
-	 * @brief GPU自动生成纹理的mipmap
-	 */
-	virtual void generateMipmaps() = 0;
-	virtual ETextureUsage getUsage() const { return getDescriptor().Usage; }
-	virtual uint32_t getMipLevels() const { return getDescriptor().MipLevels; }
-	virtual uint32_t getArrayLayers() const { return getDescriptor().ArrayLayers; }
-	virtual ETextureDimension getDimension() const { return getDescriptor().Dimension; }
-	virtual uint32_t getWidth() const = 0;
-	virtual uint32_t getHeight() const = 0;
-	virtual uint32_t getDepth() const = 0;
-	virtual EFormat getFormat() const = 0;
+	virtual class RImage* getImage() const = 0;
+	virtual const RTextureViewDescriptor& getDescriptor() const = 0;
 };
 
-class RTextureView : public RResource
+class RTextureView : public RTexture
 {
 public:
-	virtual EResourceType getType() const override { return EResourceType::Texture; }
-	virtual RTexture* getTexture() const = 0;
-	virtual RTextureViewDescriptor getDescriptor() const = 0;
+	virtual ~RTextureView() = default;
 };
 
 class RSampler : public RResource
@@ -953,7 +950,7 @@ public:
 	virtual void dispatch(uint32_t GroupX, uint32_t GroupY = 1, uint32_t GroupZ = 1) = 0;
 	
 	virtual void copyBuffer(RBuffer* Src, RBuffer* Dst, const RBufferCopyDescriptor& Descriptor) = 0;
-	virtual void copyTexture(RTexture* Src, RTexture* Dst, const RTextureCopyDescriptor& Descriptor) = 0;
+	virtual void copyTexture(RImage* Src, RImage* Dst, const RTextureCopyDescriptor& Descriptor) = 0;
 
 	virtual void resourceBarrier(const RResourceBarrier& Barriers) = 0;
 	virtual void resourceBarriers(std::span<const RResourceBarrier> Barriers) = 0;
@@ -964,7 +961,7 @@ class RSwapchain
 public:
 	virtual ~RSwapchain() = default;
 	virtual EResourceType getType() const { return EResourceType::Swapchain; }
-	virtual RTexture* acquireNextTexture() = 0;
+	virtual RImage* acquireNextTexture() = 0;
 	virtual void present() = 0;
 	virtual void resize(uint32_t Width, uint32_t Height) = 0;
 	virtual uint32_t getCurrentTextureIndex() const = 0;
@@ -1004,8 +1001,8 @@ public:
 	// 资源创建
 	virtual RBuffer* createBuffer(const RBufferDescriptor& Descriptor) = 0;
 	virtual RBuffer* createStagingBuffer(const void* Data, uint64_t Size, uint64_t InitialDataSize = 0) = 0;
-	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor) = 0;
-	virtual RTexture* createTexture(const RTextureDescriptor& Descriptor, RTextureBulkData data) = 0;
+	virtual RImage* createImage(const RImageDescriptor& Descriptor) = 0;
+	virtual RImage* createImage(const RImageDescriptor& Descriptor, const RTextureBulkData& Data) = 0;
 
 	virtual RSampler* createSampler(const RSamplerDescriptor& Descriptor) = 0;
 	virtual RShader* createShader(const RShaderDescriptor& Descriptor) = 0;

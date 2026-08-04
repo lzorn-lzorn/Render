@@ -1,34 +1,11 @@
 #include "VulkanImage.h"
-
+#include "VulkanRHI.h"
 #include "VulkanDevice.h"
 
 namespace render::rhi
 {
 
-namespace
-{
-
-VkImageType toVkImageType(ETextureDimension Dimension)
-{
-	switch (Dimension)
-	{
-	case ETextureDimension::Texture1D:
-	case ETextureDimension::Texture1DArray:
-		return VK_IMAGE_TYPE_1D;
-	case ETextureDimension::Texture3D:
-		return VK_IMAGE_TYPE_3D;
-	case ETextureDimension::Texture2D:
-	case ETextureDimension::Texture2DArray:
-	case ETextureDimension::Cube:
-	case ETextureDimension::CubeArray:
-	default:
-		return VK_IMAGE_TYPE_2D;
-	}
-}
-
-} // namespace
-
-VulkanImage::VulkanImage(VulkanDevice* InDevice, const RTextureDescriptor& InDescriptor)
+VulkanImage::VulkanImage(VulkanDevice* InDevice, const RImageDescriptor& InDescriptor)
 	: Device(InDevice)
 {
 	if (!Device || !Device->isValid())
@@ -99,11 +76,11 @@ bool VulkanImage::ownsMemory() const noexcept
 	return Ownership == EVulkanImageOwnership::Owned && Memory != VK_NULL_HANDLE;
 }
 
-bool VulkanImage::createImage(const RTextureDescriptor& Descriptor)
+bool VulkanImage::createImage(const RImageDescriptor& Descriptor)
 {
 	VkImageUsageFlags usage_flags = toVkImageUsage(Descriptor.Usage);
 	usage_flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	if (Descriptor.MipLevels > 1 || Descriptor.ShouldGenerateMipmaps || hasAnyFlags(Descriptor.Usage, ETextureUsage::TransferSrc))
+	if (Descriptor.MipLevels > 1 || Descriptor.ShouldGenerateMipmaps || hasAnyFlags(Descriptor.Usage, EImageUsage::TransferSrc))
 	{
 		usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	}
@@ -112,7 +89,7 @@ bool VulkanImage::createImage(const RTextureDescriptor& Descriptor)
 	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	image_info.flags = 0;
 	image_info.imageType = toVkImageType(Descriptor.Dimension);
-	if (Descriptor.Dimension == ETextureDimension::Cube || Descriptor.Dimension == ETextureDimension::CubeArray)
+	if (Descriptor.Dimension == EImageDimension::Cube || Descriptor.Dimension == EImageDimension::CubeArray)
 	{
 		image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
@@ -121,7 +98,7 @@ bool VulkanImage::createImage(const RTextureDescriptor& Descriptor)
 	image_info.mipLevels = Descriptor.MipLevels;
 	image_info.arrayLayers = Descriptor.ArrayLayers;
 	image_info.samples = toVkSampleCount(Descriptor.SampleCount);
-	if (Descriptor.Dimension == ETextureDimension::Texture3D)
+	if (Descriptor.Dimension == EImageDimension::Texture3D)
 	{
 		image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	}

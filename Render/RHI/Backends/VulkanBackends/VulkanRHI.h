@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../../Definitions.h"
-#include "VulkanDevice.h"
 #include <vulkan/vulkan.h>
 
 namespace render::rhi
@@ -11,7 +10,7 @@ VkFormat toVkFormat(EFormat);
 VkIndexType toVkIndexType(EIndexFormat);
 VkShaderStageFlags toVkShaderStageFlags(EShaderStage);
 VkBufferUsageFlags toVkBufferUsage(EBufferUsage);
-VkImageUsageFlags toVkImageUsage(ETextureUsage);
+VkImageUsageFlags toVkImageUsage(EImageUsage);
 VkPrimitiveTopology toVkPrimitiveTopology(EPrimitiveTopology);
 VkPolygonMode toVkPolygonMode(EFillMode);
 VkCullModeFlags toVkCullMode(ECullMode);
@@ -28,9 +27,10 @@ VkMemoryPropertyFlags toVkMemoryPropertyFlags(EMemoryProperty);
 VkImageAspectFlags toVkImageAspectMask(ETextureAspect Aspect, EFormat TextureFormat);
 VkImageAspectFlags toVkImageAspectMask(const RTextureViewDescriptor& ViewDescriptor, EFormat TextureFormat);
 uint64_t clampCopySize(uint64_t Offset, uint64_t RequestedSize, uint64_t MaxSize);
+VkImageType toVkImageType(EImageDimension Dimension);
 
 bool buildMappedMemoryRange(
-	VulkanDevice* Device,
+	class VulkanDevice* Device,
 	VkDeviceMemory Memory,
 	uint64_t BufferSize,
 	uint64_t Offset,

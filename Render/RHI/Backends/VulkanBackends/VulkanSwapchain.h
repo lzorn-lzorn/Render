@@ -20,7 +20,7 @@ public:
 	VulkanSwapchain(VulkanDevice* InDevice, const RSwapchainDescriptor& InDescriptor);
 	~VulkanSwapchain() override;
 
-	RTexture* acquireNextTexture() override;
+	RImage* acquireNextTexture() override;
 	void present() override;
 	void resize(uint32_t Width, uint32_t Height) override;
 	uint32_t getCurrentTextureIndex() const override { return CurrentImageIndex; }

@@ -784,15 +784,15 @@ int main(int argc, char* argv[])
             throw std::runtime_error("Failed to create edge pipeline");
         }
 
-        Handle<rhi::RTexture> depthTexture;
+        Handle<rhi::RImage> depthTexture;
         rhi::RTextureView* depthView = nullptr;
         bool depthInitialized = false;
         std::vector<uint8_t> swapchainImageInitialized(swapchain->getTextureCount(), 0);
 
         auto rebuildDepthTarget = [&]()
         {
-            rhi::RTextureDescriptor depthDesc{};
-            depthDesc.Usage = rhi::ETextureUsage::DepthStencil | rhi::ETextureUsage::Target;
+            rhi::RImageDescriptor depthDesc{};
+            depthDesc.Usage = rhi::EImageUsage::DepthStencil | rhi::EImageUsage::Target;
             depthDesc.Format = rhi::EFormat::D32_Float;
             depthDesc.Width = swapchain->getWidth();
             depthDesc.Height = swapchain->getHeight();
@@ -802,7 +802,7 @@ int main(int argc, char* argv[])
             depthDesc.SampleCount = rhi::ESampleCount::Count1;
             depthDesc.Name = "DepthTexture";
 
-            depthTexture = Handle<rhi::RTexture>(device->createTexture(depthDesc));
+            depthTexture = Handle<rhi::RImage>(device->createImage(depthDesc));
             if (!depthTexture.valid() || !depthTexture->isValid())
             {
                 throw std::runtime_error("Failed to create depth texture");
@@ -860,7 +860,7 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            rhi::RTexture* backBuffer = swapchain->acquireNextTexture();
+            rhi::RImage* backBuffer = swapchain->acquireNextTexture();
             if (!backBuffer || !backBuffer->isValid())
             {
                 continue;
@@ -888,7 +888,7 @@ int main(int argc, char* argv[])
             commandList->begin();
 
             rhi::RResourceBarrier colorToTarget{};
-            colorToTarget.Texture = backBuffer;
+            colorToTarget.Image = backBuffer;
             colorToTarget.Before = swapchainImageInitialized[currentBackBufferIndex] != 0
                 ? rhi::EResourceState::Present
                 : rhi::EResourceState::Undefined;
@@ -897,7 +897,7 @@ int main(int argc, char* argv[])
             swapchainImageInitialized[currentBackBufferIndex] = 1;
 
             rhi::RResourceBarrier depthToWritable{};
-            depthToWritable.Texture = depthTexture.get();
+            depthToWritable.Image = depthTexture.get();
             depthToWritable.Before = depthInitialized
                 ? rhi::EResourceState::DepthWrite
                 : rhi::EResourceState::Undefined;
@@ -983,7 +983,7 @@ int main(int argc, char* argv[])
             commandList->endRenderPass();
 
             rhi::RResourceBarrier colorToPresent{};
-            colorToPresent.Texture = backBuffer;
+            colorToPresent.Image = backBuffer;
             colorToPresent.Before = rhi::EResourceState::Target;
             colorToPresent.After = rhi::EResourceState::Present;
             commandList->resourceBarrier(colorToPresent);

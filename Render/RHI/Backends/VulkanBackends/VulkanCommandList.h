@@ -37,7 +37,7 @@ public:
 	void dispatch(uint32_t GroupX, uint32_t GroupY = 1, uint32_t GroupZ = 1) override;
 
 	void copyBuffer(RBuffer* Src, RBuffer* Dst, const RBufferCopyDescriptor& Descriptor) override;
-	void copyTexture(RTexture* Src, RTexture* Dst, const RTextureCopyDescriptor& Descriptor) override;
+	void copyTexture(RImage* Src, RImage* Dst, const RTextureCopyDescriptor& Descriptor) override;
 
 	void resourceBarrier(const RResourceBarrier& Barriers) override;
 	void resourceBarriers(std::span<const RResourceBarrier> Barriers) override;

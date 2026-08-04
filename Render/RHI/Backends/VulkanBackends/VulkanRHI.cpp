@@ -81,15 +81,15 @@ VkBufferUsageFlags toVkBufferUsage(EBufferUsage Usage)
 	return flags;
 }
 
-VkImageUsageFlags toVkImageUsage(ETextureUsage Usage)
+VkImageUsageFlags toVkImageUsage(EImageUsage Usage)
 {
 	VkImageUsageFlags flags = 0;
-	if (HasFlag(Usage, ETextureUsage::Sampled)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
-	if (HasFlag(Usage, ETextureUsage::Storage)) flags |= VK_IMAGE_USAGE_STORAGE_BIT;
-	if (HasFlag(Usage, ETextureUsage::Target)) flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	if (HasFlag(Usage, ETextureUsage::DepthStencil)) flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-	if (HasFlag(Usage, ETextureUsage::TransferSrc)) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-	if (HasFlag(Usage, ETextureUsage::TransferDst)) flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	if (HasFlag(Usage, EImageUsage::Sampled)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+	if (HasFlag(Usage, EImageUsage::Storage)) flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+	if (HasFlag(Usage, EImageUsage::Target)) flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	if (HasFlag(Usage, EImageUsage::DepthStencil)) flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	if (HasFlag(Usage, EImageUsage::TransferSrc)) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	if (HasFlag(Usage, EImageUsage::TransferDst)) flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	return flags;
 }
 
@@ -356,6 +356,24 @@ VkImageAspectFlags toVkImageAspectMask(ETextureAspect Aspect, EFormat TextureFor
 			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
 		return VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+}
+
+VkImageType toVkImageType(EImageDimension Dimension)
+{
+	switch (Dimension)
+	{
+	case EImageDimension::Texture1D:
+	case EImageDimension::Texture1DArray:
+		return VK_IMAGE_TYPE_1D;
+	case EImageDimension::Texture3D:
+		return VK_IMAGE_TYPE_3D;
+	case EImageDimension::Texture2D:
+	case EImageDimension::Texture2DArray:
+	case EImageDimension::Cube:
+	case EImageDimension::CubeArray:
+	default:
+		return VK_IMAGE_TYPE_2D;
 	}
 }
 

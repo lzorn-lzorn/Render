@@ -111,7 +111,7 @@ void VulkanCommandList::beginRenderPass(const RRenderPassDescriptor& Descriptor)
 			continue;
 		}
 
-		auto* texture = static_cast<VulkanTexture*>(texture_view->getTexture());
+		auto* texture = static_cast<VulkanTexture*>(texture_view->getImage());
 		if (texture)
 		{
 			render_width = texture->getWidth();
@@ -142,7 +142,7 @@ void VulkanCommandList::beginRenderPass(const RRenderPassDescriptor& Descriptor)
 		auto* texture_view = static_cast<VulkanTextureView*>(Descriptor.DepthStencilAttachment->TextureView);
 		if (texture_view && texture_view->isValid())
 		{
-			auto* texture = static_cast<VulkanTexture*>(texture_view->getTexture());
+			auto* texture = static_cast<VulkanTexture*>(texture_view->getImage());
 			if (texture)
 			{
 				render_width = texture->getWidth();
@@ -348,7 +348,7 @@ void VulkanCommandList::copyBuffer(RBuffer* Src, RBuffer* Dst, const RBufferCopy
 	vkCmdCopyBuffer(CommandBuffer, src_buffer->getVkBuffer(), dst_buffer->getVkBuffer(), 1, &copy_region);
 }
 
-void VulkanCommandList::copyTexture(RTexture* Src, RTexture* Dst, const RTextureCopyDescriptor& Descriptor)
+void VulkanCommandList::copyTexture(RImage* Src, RImage* Dst, const RTextureCopyDescriptor& Descriptor)
 {
 	auto* src_texture = static_cast<VulkanTexture*>(Src);
 	auto* dst_texture = static_cast<VulkanTexture*>(Dst);
@@ -407,7 +407,7 @@ void VulkanCommandList::resourceBarriers(std::span<const RResourceBarrier> Barri
 
 	for (const RResourceBarrier& barrier : Barriers)
 	{
-		auto* texture = static_cast<VulkanTexture*>(barrier.Texture);
+		auto* texture = static_cast<VulkanTexture*>(barrier.Image);
 		if (!texture || !texture->isValid())
 		{
 			continue;

@@ -21,7 +21,7 @@ enum class EVulkanImageOwnership : uint8_t
 class VulkanImage
 {
 public:
-	VulkanImage(VulkanDevice* InDevice, const RTextureDescriptor& InDescriptor);
+	VulkanImage(VulkanDevice* InDevice, const RImageDescriptor& InDescriptor);
 	VulkanImage(VulkanDevice* InDevice, VkImage InExternalImage, VkImageLayout InInitialLayout);
 	~VulkanImage();
 
@@ -35,7 +35,7 @@ public:
 	void setLayout(VkImageLayout InLayout) noexcept { Layout = InLayout; }
 
 private:
-	bool createImage(const RTextureDescriptor& Descriptor);
+	bool createImage(const RImageDescriptor& Descriptor);
 	bool allocateImageMemory();
 
 	VulkanDevice* Device = nullptr;
