@@ -18,7 +18,7 @@ enum class EVulkanImageOwnership : uint8_t
 	External
 };
 
-class VulkanImage
+class VulkanImage : public RImage
 {
 public:
 	VulkanImage(VulkanDevice* InDevice, const RImageDescriptor& InDescriptor);
@@ -35,6 +35,11 @@ public:
 	void setLayout(VkImageLayout InLayout) noexcept { Layout = InLayout; }
 
 private:
+	virtual void updateTexture(const RTextureUpdateRegion& Region, const void* SrcData, uint32_t SrcRowPitch, uint32_t SrcDepthPitch = 0) {}
+
+	virtual void generateMipmaps() {}
+
+
 	bool createImage(const RImageDescriptor& Descriptor);
 	bool allocateImageMemory();
 
