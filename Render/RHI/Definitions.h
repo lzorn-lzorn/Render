@@ -1036,4 +1036,11 @@ public:
 std::unique_ptr<RDevice> CreateDevice(ESupportedBackendAPI API);
 std::unique_ptr<RDevice> CreateDevice(const char* APIName);
 
+class RHIFactory
+{
+public:
+	virtual ~RHIFactory() = default;
+	virtual std::unique_ptr<RDevice> createDevice(ESupportedBackendAPI API) = 0;
+	virtual std::unique_ptr<RDevice> createDevice(const char* APIName) = 0;
+};
 } // namespace render::rhi

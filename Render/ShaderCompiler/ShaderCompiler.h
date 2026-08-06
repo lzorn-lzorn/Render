@@ -20,7 +20,7 @@ enum class EShaderDiagnosticSeverity
 	Error
 };
 
-struct RShaderDiagnosticInfo
+struct ShaderDiagnosticInfo
 {
 	EShaderDiagnosticSeverity Severity;
 	std::filesystem::path FilePath;
@@ -29,7 +29,7 @@ struct RShaderDiagnosticInfo
 	std::string Message;
 };
 
-struct RDescriptorRequirement
+struct DescriptorRequirement
 {
 	uint32_t Set;
 	uint32_t Binding;
@@ -38,23 +38,23 @@ struct RDescriptorRequirement
 	std::string name;
 };
 
-struct RShaderReflectionInfo
+struct ShaderReflectionInfo
 {
-	std::vector<RDescriptorRequirement> Descriptors;
+	std::vector<DescriptorRequirement> Descriptors;
 	uint32_t PushConstantSize;
 	std::vector<uint32_t> VertexInputLocations;
 };
 
-struct RCompiledShader
+struct CompiledShader
 {
 	std::vector<uint32_t> SpirvCode;
-	std::vector<RShaderDiagnosticInfo> Diagnostics;
-	RShaderReflectionInfo Reflection;
+	std::vector<ShaderDiagnosticInfo> Diagnostics;
+	ShaderReflectionInfo Reflection;
 	uint64_t SourceHash;
 	bool IsSuccess;
 };
 
-struct RShaderCompileRequest 
+struct ShaderCompileRequest 
 {
 	std::filesystem::path FilePath;
 	std::string Source;
@@ -66,11 +66,11 @@ struct RShaderCompileRequest
 	bool IsOpenCodeOptimization;
 };
 
-class RShaderCompiler
+class ShaderCompiler
 {
 
 public:
-	[[nodiscard]] RCompiledShader compile(const RShaderCompileRequest& Request);
+	[[nodiscard]] CompiledShader compile(const ShaderCompileRequest& Request);
 };
 
 

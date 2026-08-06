@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <expected>
 
 #include "RHI/Definitions.h"
 #include "Materials/Material.h"
@@ -16,8 +17,10 @@ namespace render
 using rhi::RShaderHandle;
 using rhi::RClearValue;
 
-template <typename WindowHandle>
-class RendererBuilder;
+enum class ERenderError
+{
+
+};
 
 enum class ERenderExecutionType
 {
@@ -26,10 +29,12 @@ enum class ERenderExecutionType
 	Incremental // 渐进式渲染, 尽可能复用上一帧的数据
 };
 
-enum class ERenderPath
+enum class ERenderType : std::uint8_t
 {
 	Forward,
-	Deferred
+	Deferred,
+	Offline,
+	Mobile
 };
 
 enum class EDrawDomain : std::uint8_t
@@ -59,17 +64,22 @@ constexpr ERenderReason operator|(ERenderReason lhs, ERenderReason rhs)
 	return static_cast<ERenderReason>(static_cast<std::uint32_t>(lhs) | static_cast<std::uint32_t>(rhs));
 }
 
-template <typename InPlatformType>
+
+
 class Renderer
 {
-	template <typename WindowHandle>
-	friend class RendererBuilder;
-
-	using PlatformType = InPlatformType;
 public:
+	explicit Renderer() = default;
 
-	Renderer(Renderer&&) = default;
-	Renderer& operator=(Renderer&&) = default;
+	Renderer(Renderer&&) = delete;
+	Renderer& operator=(Renderer&&) = delete;
+
+	Renderer(const Renderer&) = delete;
+	Renderer& operator=(const Renderer&) = delete;
+
+public:
+	// 初始化相关
+	Renderer& setRDevice(std::shared_ptr<rhi::RDevice> InDevice);
 
     // 编译器将 HLSL 编译为 SPIR-V 后,通过此接口注册.
     // Renderer 复制 SPIR-V 并创建 VkShaderModule.
@@ -90,17 +100,26 @@ public:
 	// 在 SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED、SDL_EVENT_WINDOW_RESIZED
     // 或 VK_ERROR_OUT_OF_DATE_KHR 时调用.
     void notifyWindowResized() noexcept;
-private:
-	explicit Renderer();
-	Renderer(const Renderer&) = delete;
-	Renderer& operator=(const Renderer&) = delete;
-
-private:
-	// 在 Cpp 中实现对应的 Impl 类, 用于隐藏平台相关的实现细节.
-	struct Impl;
-	std::unique_ptr<Impl> pImpl;
 
 };
 
+class RenderBuilder
+{
+public:
+	RenderBuilder() = default;
+
+	RenderBuilder(RenderBuilder&&) = delete;
+	RenderBuilder& operator=(RenderBuilder&&) = delete;
+
+	RenderBuilder(const RenderBuilder&) = delete;
+	RenderBuilder& operator=(const RenderBuilder&) = delete;
+
+	RenderBuilder& setRenderType(ERenderType Type);
+	RenderBuilder& setRHI(std::unique_ptr<rhi::RHIFactory> Factory);
+	RenderBuilder& setShaderCompiler(std::unique_ptr<ShaderCompiler> Compiler);
+	RenderBuilder& setRenderGraph();
+
+	std::expected<std::unique_ptr<Renderer>, ERenderError> build();
+};
 	
 } // namespace render
