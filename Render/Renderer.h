@@ -64,25 +64,50 @@ constexpr ERenderReason operator|(ERenderReason lhs, ERenderReason rhs)
 	return static_cast<ERenderReason>(static_cast<std::uint32_t>(lhs) | static_cast<std::uint32_t>(rhs));
 }
 
-
-
-class Renderer
+/**
+ * @brief UI 渲染器, 其内部不会使用 RDG, 而是以逐帧渲染为基础, 在一个 RenderTarget 上渲染UI
+ */
+class UIRenderer
 {
 public:
-	explicit Renderer() = default;
+	explicit UIRenderer() = default;
 
-	Renderer(Renderer&&) = delete;
-	Renderer& operator=(Renderer&&) = delete;
+	UIRenderer(UIRenderer&&) = delete;
+	UIRenderer& operator=(UIRenderer&&) = delete;
 
-	Renderer(const Renderer&) = delete;
-	Renderer& operator=(const Renderer&) = delete;
+	UIRenderer(const UIRenderer&) = delete;
+	UIRenderer& operator=(const UIRenderer&) = delete;
+
+	UIRenderer& setRDevice(std::shared_ptr<rhi::RDevice> InDevice);
+
+	void beginFrame();
+	void draw();
+	void endFrame();
+};
+
+class ForwardSceneRenderer
+{
+
+};
+
+
+class DeferredSceneRenderer
+{
+public:
+	explicit DeferredSceneRenderer() = default;
+
+	DeferredSceneRenderer(DeferredSceneRenderer&&) = delete;
+	DeferredSceneRenderer& operator=(DeferredSceneRenderer&&) = delete;
+
+	DeferredSceneRenderer(const DeferredSceneRenderer&) = delete;
+	DeferredSceneRenderer& operator=(const DeferredSceneRenderer&) = delete;
 
 public:
 	// 初始化相关
-	Renderer& setRDevice(std::shared_ptr<rhi::RDevice> InDevice);
+	DeferredSceneRenderer& setRDevice(std::shared_ptr<rhi::RDevice> InDevice);
 
     // 编译器将 HLSL 编译为 SPIR-V 后,通过此接口注册.
-    // Renderer 复制 SPIR-V 并创建 VkShaderModule.
+    // DeferredSceneRenderer 复制 SPIR-V 并创建 VkShaderModule.
 	void registerShader(RShaderHandle InShaderHandle, std::span<const uint8_t> InShaderCode);
 
 	void removeShader(RShaderHandle InShaderHandle);
@@ -119,7 +144,7 @@ public:
 	RenderBuilder& setShaderCompiler(std::unique_ptr<ShaderCompiler> Compiler);
 	RenderBuilder& setRenderGraph();
 
-	std::expected<std::unique_ptr<Renderer>, ERenderError> build();
+	std::expected<std::unique_ptr<DeferredSceneRenderer>, ERenderError> build();
 };
 	
 } // namespace render
