@@ -6,7 +6,7 @@
 #include <span>
 #include <expected>
 
-#include "RHI/Definitions.h"
+#include "RHI/RHI.h"
 #include "Materials/Material.h"
 #include "Geometry.h"
 #include "ShaderCompiler/ShaderCompiler.h"

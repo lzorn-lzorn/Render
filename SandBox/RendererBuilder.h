@@ -7,7 +7,7 @@
 
 #include <SDL3/SDL.h>
 
-#include "RHI/Definitions.h"
+#include "RHI/RHI.h"
 #include "Renderer.h"
 
 namespace render

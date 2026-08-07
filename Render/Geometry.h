@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RHI/Definitions.h"
+#include "RHI/RHI.h"
 namespace render
 {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Definitions.h"
+#include "../../RHI.h"
 #include "VulkanRHI.h"
 
 #include <vulkan/vulkan.h>
@@ -35,9 +35,9 @@ public:
 	void setLayout(VkImageLayout InLayout) noexcept { Layout = InLayout; }
 
 private:
-	virtual void updateTexture(const RTextureUpdateRegion& Region, const void* SrcData, uint32_t SrcRowPitch, uint32_t SrcDepthPitch = 0) {}
+	void updateTexture(const RTextureUpdateRegion& Region, const void* SrcData, uint32_t SrcRowPitch, uint32_t SrcDepthPitch = 0) override {}
 
-	virtual void generateMipmaps() {}
+	void generateMipmaps() override {}
 
 
 	bool createImage(const RImageDescriptor& Descriptor);

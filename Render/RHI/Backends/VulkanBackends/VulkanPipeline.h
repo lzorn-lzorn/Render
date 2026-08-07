@@ -1,7 +1,7 @@
 
 #pragma once 
 
-#include "../../Definitions.h"
+#include "../../RHI.h"
 #include <vulkan/vulkan.h>
 
 namespace render::rhi

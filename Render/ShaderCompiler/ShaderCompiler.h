@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-#include "../RHI/Definitions.h"
+#include "../RHI/RHI.h"
 namespace render
 {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Definitions.h"
+#include "../../RHI.h"
 #include "VulkanImage.h"
 
 #include <vulkan/vulkan.h>

@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "../../Definitions.h"
+#include "../../RHI.h"
 
 namespace render::rhi
 {

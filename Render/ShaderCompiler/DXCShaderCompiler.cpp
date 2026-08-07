@@ -1,5 +1,5 @@
 #include "ShaderCompiler.h"
-#include "../RHI/Definitions.h"
+#include "../RHI/RHI.h"
 
 #if defined(_WIN32)
 #ifndef NOMINMAX

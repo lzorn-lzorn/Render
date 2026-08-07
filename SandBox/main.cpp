@@ -25,7 +25,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Handle.h"
-#include "RHI/Definitions.h"
+#include "RHI/RHI.h"
 
 #include <cstddef>
 #include <cstdlib>
